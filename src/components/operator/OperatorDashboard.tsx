@@ -12,6 +12,12 @@ import {
   Printer,
 } from 'lucide-react';
 
+type StatusConfig = {
+  label: string;
+  color: string;
+  icon: typeof Package;
+};
+
 export function OperatorDashboard() {
   const { profile, signOut } = useAuth();
   const [orders, setOrders] = useState<OrderWithItems[]>([]);
@@ -86,19 +92,19 @@ export function OperatorDashboard() {
     }
   };
 
-  const getStatusConfig = (status: string) => {
+  const getStatusConfig = (status: string): StatusConfig => {
     switch (status) {
       case 'pending':
         return {
           label: 'Pendente',
           color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-          icon: Clock,
+          icon: Clock as typeof Package,
         };
       case 'dispatched':
         return {
           label: 'Despachado',
           color: 'bg-green-100 text-green-800 border-green-200',
-          icon: Truck,
+          icon: Truck as typeof Package,
         };
       case 'cancelled':
         return {
@@ -124,17 +130,17 @@ export function OperatorDashboard() {
     return parsed.toLocaleString('pt-BR');
   };
 
-  const buildPrintHtml = (order: any) => {
+  const buildPrintHtml = (order: OrderWithItems) => {
     const totalItems =
       order.order_items?.reduce(
-        (sum: number, item: any) => sum + Number(item.quantity || 0),
+        (sum, item) => sum + Number(item.quantity || 0),
         0
       ) || 0;
 
     const itemsHtml =
       order.order_items
         ?.map(
-          (item: any) => `
+          (item) => `
             <tr>
               <td class="qty">${item.quantity}x</td>
               <td class="desc">
@@ -224,11 +230,6 @@ export function OperatorDashboard() {
               font-weight: 700;
               text-transform: uppercase;
               margin-bottom: 4px;
-            }
-
-            .subtitle {
-              font-size: 12px;
-              margin-bottom: 6px;
             }
 
             .order-number {
@@ -360,9 +361,7 @@ export function OperatorDashboard() {
             <div class="line"><strong>Criado em:</strong> ${formatDateTime(order.created_at)}</div>
             ${
               order.dispatched_at
-                ? `<div class="line"><strong>Despachado em:</strong> ${formatDateTime(
-                    order.dispatched_at
-                  )}</div>`
+                ? `<div class="line"><strong>Despachado em:</strong> ${formatDateTime(order.dispatched_at)}</div>`
                 : ''
             }
 
@@ -399,7 +398,7 @@ export function OperatorDashboard() {
     `;
   };
 
-  const handlePrintOrder = (order: any) => {
+  const handlePrintOrder = (order: OrderWithItems) => {
     const printWindow = window.open('', '_blank', 'width=420,height=800');
 
     if (!printWindow) {
@@ -459,7 +458,7 @@ export function OperatorDashboard() {
           </div>
         ) : (
           <div className="space-y-4">
-            {orders.map((order: any) => {
+            {orders.map((order) => {
               const statusConfig = getStatusConfig(order.status);
               const StatusIcon = statusConfig.icon;
 
@@ -536,7 +535,7 @@ export function OperatorDashboard() {
                     <div className="border-t pt-4">
                       <h4 className="font-semibold text-gray-900 mb-3">Itens do Pedido:</h4>
                       <div className="space-y-2">
-                        {order.order_items.map((item: any) => (
+                        {order.order_items.map((item) => (
                           <div
                             key={item.id}
                             className="flex items-center justify-between bg-gray-50 p-3 rounded-lg"
@@ -545,9 +544,9 @@ export function OperatorDashboard() {
                               <Package className="w-5 h-5 text-gray-500" />
                               <div>
                                 <p className="font-medium text-gray-900">
-                                  {item.products.name}
+                                  {item.products?.name || 'Produto'}
                                 </p>
-                                {item.products.description && (
+                                {item.products?.description && (
                                   <p className="text-sm text-gray-600">
                                     {item.products.description}
                                   </p>
@@ -565,7 +564,7 @@ export function OperatorDashboard() {
                         <span className="text-gray-700 font-medium">Total de itens:</span>
                         <span className="text-xl font-bold text-gray-900">
                           {order.order_items.reduce(
-                            (sum: number, item: any) => sum + item.quantity,
+                            (sum, item) => sum + Number(item.quantity || 0),
                             0
                           )}{' '}
                           unidades
