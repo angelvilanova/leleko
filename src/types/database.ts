@@ -12,10 +12,20 @@ export interface Profile {
 export interface Product {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   stock_quantity: number;
+  price: number;
+  cost_price: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface Customer {
+  id: string;
+  name: string;
+  phone: string;
+  address: string;
+  created_at: string;
 }
 
 export interface Order {
@@ -24,7 +34,7 @@ export interface Order {
   status: OrderStatus;
   created_by: string;
   dispatched_by: string | null;
-  customer_id?: string | null;   // <-- add
+  customer_id: string | null;
   created_at: string;
   dispatched_at: string | null;
 }
@@ -34,23 +44,25 @@ export interface OrderItem {
   order_id: string;
   product_id: string;
   quantity: number;
+
+  // preço no momento da venda
+  unit_price: number;
+
+  // custo no momento da venda
+  unit_cost: number;
+
   created_at: string;
 }
 
 export interface OrderWithItems extends Order {
-  order_items: (OrderItem & { products: Product })[];
-  profiles: Profile;
+  order_items: (OrderItem & {
+    products: Product | null;
+  })[];
+
+  profiles?: Profile | null;
 }
 
 export interface CartItem {
   product: Product;
   quantity: number;
-}
-
-export interface Customer {
-  id: string;
-  name: string;
-  phone: string;
-  address: string;
-  created_at: string;
 }
