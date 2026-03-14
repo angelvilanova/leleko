@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { CalendarDays, TrendingUp, Package, RefreshCcw } from 'lucide-react';
+import {
+  CalendarDays,
+  TrendingUp,
+  Package,
+  RefreshCcw,
+  DollarSign,
+} from 'lucide-react';
 
 type Row = {
   id: string;
@@ -8,6 +14,7 @@ type Row = {
   order_items: Array<{
     quantity: number;
     unit_price: number;
+    unit_cost: number;
     products: { name: string } | null;
   }>;
 };
@@ -17,14 +24,17 @@ function startOfDay(d: Date) {
   x.setHours(0, 0, 0, 0);
   return x;
 }
+
 function startOfMonth(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
 }
+
 function addDays(d: Date, days: number) {
   const x = new Date(d);
   x.setDate(x.getDate() + days);
   return x;
 }
+
 function formatBRL(v: number) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
@@ -39,14 +49,15 @@ export function CashierDashboard() {
   const todayStart = startOfDay(now);
   const tomorrowStart = startOfDay(addDays(now, 1));
   const monthStart = startOfMonth(now);
-  const nextMonthStart = startOfMonth(addDays(new Date(now.getFullYear(), now.getMonth(), 1), 32));
+  const nextMonthStart = startOfMonth(
+    addDays(new Date(now.getFullYear(), now.getMonth(), 1), 32)
+  );
 
   async function load() {
     setLoading(true);
     setErrorMsg(null);
 
     try {
-      // Hoje
       const { data: d1, error: e1 } = await supabase
         .from('orders')
         .select(
@@ -56,6 +67,7 @@ export function CashierDashboard() {
           order_items (
             quantity,
             unit_price,
+            unit_cost,
             products ( name )
           )
         `
@@ -68,7 +80,6 @@ export function CashierDashboard() {
       if (e1) throw e1;
       setRowsToday((d1 || []) as Row[]);
 
-      // Mês
       const { data: d2, error: e2 } = await supabase
         .from('orders')
         .select(
@@ -78,6 +89,7 @@ export function CashierDashboard() {
           order_items (
             quantity,
             unit_price,
+            unit_cost,
             products ( name )
           )
         `
@@ -91,7 +103,9 @@ export function CashierDashboard() {
       setRowsMonth((d2 || []) as Row[]);
     } catch (err) {
       console.error(err);
-      setErrorMsg('Erro ao carregar dados do caixa. Verifique RLS e colunas de preço.');
+      setErrorMsg(
+        'Erro ao carregar dados do caixa. Verifique RLS e as colunas unit_price e unit_cost.'
+      );
     } finally {
       setLoading(false);
     }
@@ -114,7 +128,8 @@ export function CashierDashboard() {
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Caixa</h2>
           <p className="text-sm text-gray-600">
-            Hoje: {todayStart.toLocaleDateString('pt-BR')} • Mês: {monthStart.toLocaleDateString('pt-BR')}
+            Hoje: {todayStart.toLocaleDateString('pt-BR')} • Mês:{' '}
+            {monthStart.toLocaleDateString('pt-BR')}
           </p>
         </div>
 
@@ -133,37 +148,93 @@ export function CashierDashboard() {
         </div>
       )}
 
-      {/* Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl border border-gray-200 shadow-md p-5">
           <div className="flex items-center gap-2 text-gray-700 mb-2">
             <CalendarDays className="w-5 h-5" />
-            <span className="font-semibold">Total vendido hoje</span>
+            <span className="font-semibold">Faturamento hoje</span>
           </div>
-          <div className="text-3xl font-bold text-gray-900">{formatBRL(todayStats.totalRevenue)}</div>
+          <div className="text-3xl font-bold text-gray-900">
+            {formatBRL(todayStats.totalRevenue)}
+          </div>
           <div className="text-sm text-gray-600 mt-2">
-            Pedidos: <span className="font-semibold">{todayStats.ordersCount}</span> • Itens:{' '}
-            <span className="font-semibold">{todayStats.totalItems}</span>
+            Pedidos: <span className="font-semibold">{todayStats.ordersCount}</span> •
+            Itens: <span className="font-semibold">{todayStats.totalItems}</span>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 shadow-md p-5">
+          <div className="flex items-center gap-2 text-gray-700 mb-2">
+            <DollarSign className="w-5 h-5" />
+            <span className="font-semibold">Custo hoje</span>
+          </div>
+          <div className="text-3xl font-bold text-orange-600">
+            {formatBRL(todayStats.totalCost)}
+          </div>
+          <div className="text-sm text-gray-600 mt-2">
+            Ticket bruto: <span className="font-semibold">{formatBRL(todayStats.totalRevenue)}</span>
           </div>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-md p-5">
           <div className="flex items-center gap-2 text-gray-700 mb-2">
             <TrendingUp className="w-5 h-5" />
-            <span className="font-semibold">Total vendido no mês</span>
+            <span className="font-semibold">Lucro líquido hoje</span>
           </div>
-          <div className="text-3xl font-bold text-gray-900">{formatBRL(monthStats.totalRevenue)}</div>
+          <div className="text-3xl font-bold text-green-600">
+            {formatBRL(todayStats.totalProfit)}
+          </div>
           <div className="text-sm text-gray-600 mt-2">
-            Pedidos: <span className="font-semibold">{monthStats.ordersCount}</span> • Itens:{' '}
-            <span className="font-semibold">{monthStats.totalItems}</span>
+            Margem: <span className="font-semibold">{todayStats.margin}%</span>
           </div>
         </div>
       </div>
 
-      {/* Rankings */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-md p-5">
+          <div className="flex items-center gap-2 text-gray-700 mb-2">
+            <CalendarDays className="w-5 h-5" />
+            <span className="font-semibold">Faturamento no mês</span>
+          </div>
+          <div className="text-3xl font-bold text-gray-900">
+            {formatBRL(monthStats.totalRevenue)}
+          </div>
+          <div className="text-sm text-gray-600 mt-2">
+            Pedidos: <span className="font-semibold">{monthStats.ordersCount}</span> •
+            Itens: <span className="font-semibold">{monthStats.totalItems}</span>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 shadow-md p-5">
+          <div className="flex items-center gap-2 text-gray-700 mb-2">
+            <DollarSign className="w-5 h-5" />
+            <span className="font-semibold">Custo no mês</span>
+          </div>
+          <div className="text-3xl font-bold text-orange-600">
+            {formatBRL(monthStats.totalCost)}
+          </div>
+          <div className="text-sm text-gray-600 mt-2">
+            Ticket bruto: <span className="font-semibold">{formatBRL(monthStats.totalRevenue)}</span>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 shadow-md p-5">
+          <div className="flex items-center gap-2 text-gray-700 mb-2">
+            <TrendingUp className="w-5 h-5" />
+            <span className="font-semibold">Lucro líquido no mês</span>
+          </div>
+          <div className="text-3xl font-bold text-green-600">
+            {formatBRL(monthStats.totalProfit)}
+          </div>
+          <div className="text-sm text-gray-600 mt-2">
+            Margem: <span className="font-semibold">{monthStats.margin}%</span>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <RankingCard title="Vendas por produto (hoje)" items={todayStats.byProduct} />
-        <RankingCard title="Vendas por produto (mês)" items={monthStats.byProduct} />
+        <RankingCard title="Resultado por produto (hoje)" items={todayStats.byProduct} />
+        <RankingCard title="Resultado por produto (mês)" items={monthStats.byProduct} />
       </div>
     </div>
   );
@@ -171,32 +242,66 @@ export function CashierDashboard() {
 
 function buildStats(rows: Row[]) {
   let totalRevenue = 0;
+  let totalCost = 0;
+  let totalProfit = 0;
   let totalItems = 0;
 
-  const map: Record<string, { name: string; qty: number; revenue: number }> = {};
+  const map: Record<
+    string,
+    {
+      name: string;
+      qty: number;
+      revenue: number;
+      cost: number;
+      profit: number;
+    }
+  > = {};
 
-  for (const o of rows) {
-    for (const it of o.order_items || []) {
-      const name = it.products?.name ?? 'Produto';
-      const qty = Number(it.quantity || 0);
-      const unit = Number(it.unit_price || 0);
-      const rev = qty * unit;
+  for (const order of rows) {
+    for (const item of order.order_items || []) {
+      const name = item.products?.name ?? 'Produto';
+      const qty = Number(item.quantity || 0);
+      const unitPrice = Number(item.unit_price || 0);
+      const unitCost = Number(item.unit_cost || 0);
+
+      const revenue = qty * unitPrice;
+      const cost = qty * unitCost;
+      const profit = revenue - cost;
 
       totalItems += qty;
-      totalRevenue += rev;
+      totalRevenue += revenue;
+      totalCost += cost;
+      totalProfit += profit;
 
-      if (!map[name]) map[name] = { name, qty: 0, revenue: 0 };
+      if (!map[name]) {
+        map[name] = {
+          name,
+          qty: 0,
+          revenue: 0,
+          cost: 0,
+          profit: 0,
+        };
+      }
+
       map[name].qty += qty;
-      map[name].revenue += rev;
+      map[name].revenue += revenue;
+      map[name].cost += cost;
+      map[name].profit += profit;
     }
   }
 
-  const byProduct = Object.values(map).sort((a, b) => b.revenue - a.revenue);
+  const byProduct = Object.values(map).sort((a, b) => b.profit - a.profit);
+
+  const margin =
+    totalRevenue > 0 ? Number(((totalProfit / totalRevenue) * 100).toFixed(2)) : 0;
 
   return {
     ordersCount: rows.length,
     totalItems,
     totalRevenue,
+    totalCost,
+    totalProfit,
+    margin,
     byProduct,
   };
 }
@@ -206,7 +311,13 @@ function RankingCard({
   items,
 }: {
   title: string;
-  items: Array<{ name: string; qty: number; revenue: number }>;
+  items: Array<{
+    name: string;
+    qty: number;
+    revenue: number;
+    cost: number;
+    profit: number;
+  }>;
 }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-md p-5">
@@ -220,12 +331,29 @@ function RankingCard({
       ) : (
         <div className="space-y-2">
           {items.slice(0, 10).map((p) => (
-            <div key={p.name} className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg p-3">
-              <div className="min-w-0">
-                <div className="font-semibold text-gray-900 truncate">{p.name}</div>
-                <div className="text-xs text-gray-600">Quantidade: {p.qty}</div>
+            <div
+              key={p.name}
+              className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-1"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="font-semibold text-gray-900 truncate">{p.name}</div>
+                  <div className="text-xs text-gray-600">Quantidade: {p.qty}</div>
+                </div>
+
+                <div className="text-right">
+                  <div className="font-bold text-gray-900">{formatBRL(p.revenue)}</div>
+                </div>
               </div>
-              <div className="font-bold text-gray-900">{p.revenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-gray-200">
+                <div className="text-gray-600">
+                  Custo: <span className="font-semibold">{formatBRL(p.cost)}</span>
+                </div>
+                <div className="text-right text-green-700">
+                  Lucro: <span className="font-semibold">{formatBRL(p.profit)}</span>
+                </div>
+              </div>
             </div>
           ))}
         </div>

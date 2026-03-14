@@ -30,7 +30,6 @@ export function OrderCreation() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  // Clientes
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [customerQuery, setCustomerQuery] = useState('');
@@ -43,6 +42,12 @@ export function OrderCreation() {
   const [customerError, setCustomerError] = useState<string | null>(null);
 
   const normalizePhone = (v: string) => v.replace(/\D/g, '');
+
+  const formatCurrency = (value: number) =>
+    Number(value || 0).toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    });
 
   useEffect(() => {
     loadProducts();
@@ -85,11 +90,15 @@ export function OrderCreation() {
     if (!q) return customers;
 
     const qPhone = normalizePhone(q);
+
     return customers.filter((c) => {
-      const phone = normalizePhone(c.phone);
+      const name = c.name?.toLowerCase() || '';
+      const address = c.address?.toLowerCase() || '';
+      const phone = normalizePhone(c.phone || '');
+
       return (
-        c.name.toLowerCase().includes(q) ||
-        c.address.toLowerCase().includes(q) ||
+        name.includes(q) ||
+        address.includes(q) ||
         (qPhone && phone.includes(qPhone))
       );
     });
@@ -119,6 +128,7 @@ export function OrderCreation() {
         .map((item) => {
           if (item.product.id === productId) {
             const newQuantity = item.quantity + delta;
+
             return {
               ...item,
               quantity: Math.max(
@@ -127,6 +137,7 @@ export function OrderCreation() {
               ),
             };
           }
+
           return item;
         })
         .filter((item) => item.quantity > 0)
@@ -145,6 +156,7 @@ export function OrderCreation() {
     const random = Math.floor(Math.random() * 10000)
       .toString()
       .padStart(4, '0');
+
     return `PED-${year}${month}${day}-${random}`;
   };
 
@@ -161,7 +173,6 @@ export function OrderCreation() {
     }
 
     try {
-      // evita duplicar cliente pelo telefone (opcional)
       const { data: existing, error: existingErr } = await supabase
         .from('customers')
         .select('id')
@@ -188,16 +199,17 @@ export function OrderCreation() {
       if (error) throw error;
 
       const created = data as Customer;
+
       setCustomers((prev) =>
         [...prev, created].sort((a, b) => a.name.localeCompare(b.name))
       );
 
       setSelectedCustomerId(created.id);
       setShowNewCustomer(false);
-
       setNewCustomerName('');
       setNewCustomerPhone('');
       setNewCustomerAddress('');
+      setCustomerError(null);
     } catch (error) {
       console.error('Error creating customer:', error);
       setCustomerError(
@@ -216,16 +228,31 @@ export function OrderCreation() {
       return;
     }
 
-    // 🔒 validação: não deixa criar pedido com produto sem preço
-    const anyZeroPrice = cart.some((i) => !i.product.price || i.product.price <= 0);
+    const anyZeroPrice = cart.some(
+      (item) => !item.product.price || item.product.price <= 0
+    );
+
     if (anyZeroPrice) {
       setCustomerError(
-        'Existe produto no carrinho sem preço. Cadastre o preço do produto para o caixa somar corretamente.'
+        'Existe produto no carrinho sem preço de venda. Cadastre o preço do produto antes de criar o pedido.'
+      );
+      return;
+    }
+
+    const anyNegativeCost = cart.some(
+      (item) => Number(item.product.cost_price || 0) < 0
+    );
+
+    if (anyNegativeCost) {
+      setCustomerError(
+        'Existe produto com preço de custo inválido.'
       );
       return;
     }
 
     setSubmitting(true);
+    setCustomerError(null);
+
     try {
       const orderNumber = generateOrderNumber();
 
@@ -244,12 +271,12 @@ export function OrderCreation() {
 
       if (orderError) throw orderError;
 
-      // ✅ aqui é o ponto principal do caixa: salvar unit_price no momento da venda
       const orderItems = cart.map((item) => ({
         order_id: order.id,
         product_id: item.product.id,
         quantity: item.quantity,
-        unit_price: item.product.price, // ✅ mantém o preço da venda
+        unit_price: Number(item.product.price || 0),
+        unit_cost: Number(item.product.cost_price || 0),
       }));
 
       const { error: itemsError } = await supabase
@@ -261,7 +288,9 @@ export function OrderCreation() {
       for (const item of cart) {
         const { error: updateError } = await supabase
           .from('products')
-          .update({ stock_quantity: item.product.stock_quantity - item.quantity })
+          .update({
+            stock_quantity: item.product.stock_quantity - item.quantity,
+          })
           .eq('id', item.product.id);
 
         if (updateError) throw updateError;
@@ -271,22 +300,24 @@ export function OrderCreation() {
       setSelectedCustomerId('');
       setCustomerQuery('');
       setCustomerError(null);
-
       setSuccess(true);
+
       setTimeout(() => setSuccess(false), 3000);
 
       loadProducts();
       loadCustomers();
     } catch (error) {
       console.error('Error creating order:', error);
+      setCustomerError('Não foi possível criar o pedido.');
     } finally {
       setSubmitting(false);
     }
   };
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+
   const totalValue = cart.reduce(
-    (sum, item) => sum + item.quantity * (item.product.price ?? 0),
+    (sum, item) => sum + item.quantity * Number(item.product.price ?? 0),
     0
   );
 
@@ -304,8 +335,7 @@ export function OrderCreation() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {products.map((product) => {
             const inCart = cart.find((item) => item.product.id === product.id);
-            const availableStock =
-              product.stock_quantity - (inCart?.quantity || 0);
+            const availableStock = product.stock_quantity - (inCart?.quantity || 0);
 
             return (
               <div
@@ -315,12 +345,20 @@ export function OrderCreation() {
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <h3 className="font-semibold text-gray-900">{product.name}</h3>
+
                     {product.description && (
                       <p className="text-sm text-gray-600 mt-1">{product.description}</p>
                     )}
-                    {/* ✅ mostra preço (ajuda a detectar produto com preço 0) */}
+
                     <p className="text-sm text-gray-700 mt-1">
-                      Preço: <span className="font-semibold">R$ {(product.price ?? 0).toFixed(2)}</span>
+                      Preço:{' '}
+                      <span className="font-semibold">
+                        {formatCurrency(product.price ?? 0)}
+                      </span>
+                    </p>
+
+                    <p className="text-xs text-gray-500 mt-1">
+                      Custo: {formatCurrency(product.cost_price ?? 0)}
                     </p>
                   </div>
                 </div>
@@ -329,6 +367,7 @@ export function OrderCreation() {
                   <span className="text-sm text-gray-600">
                     Disponível: <span className="font-semibold">{availableStock}</span>
                   </span>
+
                   <button
                     onClick={() => addToCart(product)}
                     disabled={availableStock === 0}
@@ -357,7 +396,6 @@ export function OrderCreation() {
             <h2 className="text-xl font-bold text-gray-900">Carrinho</h2>
           </div>
 
-          {/* CLIENTE */}
           <div className="mb-5 bg-gray-50 border border-gray-200 rounded-xl p-4">
             <div className="flex items-center justify-between gap-2 mb-3">
               <div className="flex items-center gap-2">
@@ -420,7 +458,6 @@ export function OrderCreation() {
             )}
           </div>
 
-          {/* CARRINHO */}
           {cart.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-50" />
@@ -437,9 +474,10 @@ export function OrderCreation() {
                           {item.product.name}
                         </h4>
                         <p className="text-xs text-gray-600">
-                          R$ {(item.product.price ?? 0).toFixed(2)}
+                          {formatCurrency(item.product.price ?? 0)}
                         </p>
                       </div>
+
                       <button
                         onClick={() => removeFromCart(item.product.id)}
                         className="text-red-500 hover:text-red-700"
@@ -456,9 +494,11 @@ export function OrderCreation() {
                         >
                           <Minus className="w-3 h-3" />
                         </button>
+
                         <span className="font-semibold text-gray-900 min-w-[2rem] text-center">
                           {item.quantity}
                         </span>
+
                         <button
                           onClick={() => updateQuantity(item.product.id, 1)}
                           disabled={item.quantity >= item.product.stock_quantity}
@@ -469,7 +509,7 @@ export function OrderCreation() {
                       </div>
 
                       <span className="text-sm font-semibold text-gray-900">
-                        R$ {(item.quantity * (item.product.price ?? 0)).toFixed(2)}
+                        {formatCurrency(item.quantity * Number(item.product.price ?? 0))}
                       </span>
                     </div>
                   </div>
@@ -485,7 +525,7 @@ export function OrderCreation() {
                 <div className="flex items-center justify-between">
                   <span className="text-gray-700">Total (estimado):</span>
                   <span className="font-bold text-lg text-gray-900">
-                    R$ {totalValue.toFixed(2)}
+                    {formatCurrency(totalValue)}
                   </span>
                 </div>
 
@@ -515,7 +555,6 @@ export function OrderCreation() {
         </div>
       </div>
 
-      {/* MODAL NOVO CLIENTE */}
       {showNewCustomer && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
           <div className="bg-white w-full max-w-xl rounded-2xl shadow-xl border border-gray-200">
@@ -575,6 +614,7 @@ export function OrderCreation() {
               >
                 Cancelar
               </button>
+
               <button
                 onClick={createCustomer}
                 className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700"

@@ -36,9 +36,21 @@ type OrderRow = {
 };
 
 type DraftItem = {
-  id: string; // order_item.id
+  id: string;
   product_id: string;
   quantity: number;
+};
+
+const statusLabel: Record<OrderRow['status'], string> = {
+  pending: 'Pendente',
+  dispatched: 'Despachado',
+  cancelled: 'Cancelado',
+};
+
+const statusClasses: Record<OrderRow['status'], string> = {
+  pending: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+  dispatched: 'bg-green-50 text-green-700 border-green-200',
+  cancelled: 'bg-red-50 text-red-700 border-red-200',
 };
 
 function toStartISO(yyyyMmDd: string) {
@@ -75,35 +87,34 @@ export function OrderManagement() {
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  // edição
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftStatus, setDraftStatus] = useState<OrderRow['status']>('pending');
   const [draftItems, setDraftItems] = useState<DraftItem[]>([]);
   const [saving, setSaving] = useState(false);
 
-  // busca
   const [query, setQuery] = useState('');
-
-  // ✅ filtro por despacho
-  const [dispatchFrom, setDispatchFrom] = useState(''); // YYYY-MM-DD
-  const [dispatchTo, setDispatchTo] = useState('');     // YYYY-MM-DD
+  const [dispatchFrom, setDispatchFrom] = useState('');
+  const [dispatchTo, setDispatchTo] = useState('');
 
   useEffect(() => {
     (async () => {
       await Promise.all([loadOrders(), loadProducts()]);
       setLoading(false);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filteredOrders = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return orders;
+
     return orders.filter((o) => {
       const c = o.customers;
+      const translatedStatus = statusLabel[o.status].toLowerCase();
+
       return (
         o.order_number.toLowerCase().includes(q) ||
         o.status.toLowerCase().includes(q) ||
+        translatedStatus.includes(q) ||
         (c?.name?.toLowerCase().includes(q) ?? false) ||
         (c?.phone?.toLowerCase().includes(q) ?? false) ||
         (c?.address?.toLowerCase().includes(q) ?? false)
@@ -121,6 +132,7 @@ export function OrderManagement() {
       console.error(error);
       return;
     }
+
     setProducts((data || []) as Product[]);
   }
 
@@ -136,7 +148,6 @@ export function OrderManagement() {
       )
       .order('created_at', { ascending: false });
 
-    // ✅ Filtro por data de DESPACHO
     if (dispatchFrom || dispatchTo) {
       q = q.eq('status', 'dispatched');
       if (dispatchFrom) q = q.gte('dispatched_at', toStartISO(dispatchFrom));
@@ -149,6 +160,7 @@ export function OrderManagement() {
       console.error(error);
       return;
     }
+
     setOrders((data || []) as OrderRow[]);
   }
 
@@ -169,7 +181,6 @@ export function OrderManagement() {
       return;
     }
 
-    // month
     setDispatchFrom(startOfMonthYMD(now));
     setDispatchTo(toYMD(now));
   }
@@ -209,6 +220,7 @@ export function OrderManagement() {
     const tempId = `tmp_${Math.random().toString(16).slice(2)}`;
     const firstProduct = products[0];
     if (!firstProduct) return;
+
     setDraftItems((prev) => [
       ...prev,
       { id: tempId, product_id: firstProduct.id, quantity: 1 },
@@ -217,6 +229,7 @@ export function OrderManagement() {
 
   async function saveEdit(orderId: string) {
     setSaving(true);
+
     try {
       const { data: currentItems, error: curErr } = await supabase
         .from('order_items')
@@ -225,11 +238,28 @@ export function OrderManagement() {
 
       if (curErr) throw curErr;
 
-      const current = (currentItems || []) as Array<{ id: string; product_id: string; quantity: number }>;
+      const current = (currentItems || []) as Array<{
+        id: string;
+        product_id: string;
+        quantity: number;
+      }>;
+
+      const updatePayload: {
+        status: OrderRow['status'];
+        dispatched_at?: string | null;
+      } = {
+        status: draftStatus,
+      };
+
+      if (draftStatus === 'dispatched') {
+        updatePayload.dispatched_at = new Date().toISOString();
+      } else if (draftStatus === 'pending' || draftStatus === 'cancelled') {
+        updatePayload.dispatched_at = null;
+      }
 
       const { error: stErr } = await supabase
         .from('orders')
-        .update({ status: draftStatus })
+        .update(updatePayload)
         .eq('id', orderId);
 
       if (stErr) throw stErr;
@@ -240,12 +270,14 @@ export function OrderManagement() {
           .select('id, stock_quantity')
           .eq('id', it.product_id)
           .single();
+
         if (pErr) throw pErr;
 
         const { error: uErr } = await supabase
           .from('products')
           .update({ stock_quantity: (prod.stock_quantity as number) + it.quantity })
           .eq('id', it.product_id);
+
         if (uErr) throw uErr;
       }
 
@@ -257,6 +289,7 @@ export function OrderManagement() {
           .from('order_items')
           .update({ product_id: d.product_id, quantity: d.quantity })
           .eq('id', d.id);
+
         if (error) throw error;
       }
 
@@ -273,6 +306,7 @@ export function OrderManagement() {
 
       const draftRealIds = new Set(existingDraft.map((d) => d.id));
       const removed = current.filter((c) => !draftRealIds.has(c.id));
+
       for (const r of removed) {
         const { error } = await supabase.from('order_items').delete().eq('id', r.id);
         if (error) throw error;
@@ -286,12 +320,14 @@ export function OrderManagement() {
       if (finErr) throw finErr;
 
       const finalIt = (finalItems || []) as Array<{ product_id: string; quantity: number }>;
+
       for (const it of finalIt) {
         const { data: prod, error: pErr } = await supabase
           .from('products')
           .select('id, stock_quantity')
           .eq('id', it.product_id)
           .single();
+
         if (pErr) throw pErr;
 
         const newStock = (prod.stock_quantity as number) - it.quantity;
@@ -303,6 +339,7 @@ export function OrderManagement() {
           .from('products')
           .update({ stock_quantity: newStock })
           .eq('id', it.product_id);
+
         if (uErr) throw uErr;
       }
 
@@ -331,12 +368,14 @@ export function OrderManagement() {
           .select('id, stock_quantity')
           .eq('id', it.product_id)
           .single();
+
         if (pErr) throw pErr;
 
         const { error: uErr } = await supabase
           .from('products')
           .update({ stock_quantity: (prod.stock_quantity as number) + it.quantity })
           .eq('id', it.product_id);
+
         if (uErr) throw uErr;
       }
 
@@ -367,11 +406,9 @@ export function OrderManagement() {
             placeholder="Buscar por pedido, status, cliente..."
           />
 
-          {/* ✅ Botões rápidos */}
           <button
             onClick={() => {
               applyQuickRange('today');
-              // estados mudam, então aguardamos o próximo tick:
               setTimeout(loadOrders, 0);
             }}
             className="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm"
@@ -399,7 +436,6 @@ export function OrderManagement() {
             Este mês
           </button>
 
-          {/* 📅 De/Até */}
           <div className="flex items-center gap-2">
             <label className="text-sm text-gray-600">Despacho De</label>
             <input
@@ -470,8 +506,10 @@ export function OrderManagement() {
                         )}
                       </button>
 
-                      <span className="text-xs px-3 py-1 rounded-full border bg-gray-50 text-gray-700">
-                        status: <span className="font-semibold">{order.status}</span>
+                      <span
+                        className={`text-xs px-3 py-1 rounded-full border ${statusClasses[order.status]}`}
+                      >
+                        Status: <span className="font-semibold">{statusLabel[order.status]}</span>
                       </span>
                     </div>
 
@@ -549,13 +587,13 @@ export function OrderManagement() {
                             onChange={(e) => setDraftStatus(e.target.value as OrderRow['status'])}
                             className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
                           >
-                            <option value="pending">pending</option>
-                            <option value="dispatched">dispatched</option>
-                            <option value="cancelled">cancelled</option>
+                            <option value="pending">Pendente</option>
+                            <option value="dispatched">Despachado</option>
+                            <option value="cancelled">Cancelado</option>
                           </select>
                         ) : (
                           <div className="text-sm text-gray-700">
-                            <span className="font-semibold">{order.status}</span>
+                            <span className="font-semibold">{statusLabel[order.status]}</span>
                           </div>
                         )}
                       </div>
@@ -640,7 +678,11 @@ export function OrderManagement() {
                                   {editing ? (
                                     <>
                                       <button
-                                        onClick={() => updateDraftItem(draft.id, { quantity: Math.max(1, qty - 1) })}
+                                        onClick={() =>
+                                          updateDraftItem(draft.id, {
+                                            quantity: Math.max(1, qty - 1),
+                                          })
+                                        }
                                         className="bg-white border border-gray-300 p-2 rounded-lg hover:bg-gray-100"
                                         title="-"
                                       >
@@ -652,7 +694,9 @@ export function OrderManagement() {
                                         value={qty}
                                         onChange={(e) => {
                                           const v = Number(e.target.value);
-                                          updateDraftItem(draft.id, { quantity: Number.isFinite(v) ? Math.max(1, v) : 1 });
+                                          updateDraftItem(draft.id, {
+                                            quantity: Number.isFinite(v) ? Math.max(1, v) : 1,
+                                          });
                                         }}
                                         className="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm text-center"
                                       />
