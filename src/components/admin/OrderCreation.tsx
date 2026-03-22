@@ -41,6 +41,8 @@ export function OrderCreation() {
 
   const [customerError, setCustomerError] = useState<string | null>(null);
 
+  const [productQuery, setProductQuery] = useState('');
+
   const normalizePhone = (v: string) => v.replace(/\D/g, '');
 
   const formatCurrency = (value: number) =>
@@ -103,6 +105,18 @@ export function OrderCreation() {
       );
     });
   }, [customers, customerQuery]);
+
+  const filteredProducts = useMemo(() => {
+    const q = productQuery.trim().toLowerCase();
+    if (!q) return products;
+
+    return products.filter((product) => {
+      const name = product.name?.toLowerCase() || '';
+      const description = product.description?.toLowerCase() || '';
+
+      return name.includes(q) || description.includes(q);
+    });
+  }, [products, productQuery]);
 
   const addToCart = (product: Product) => {
     const existingItem = cart.find((item) => item.product.id === product.id);
@@ -244,9 +258,7 @@ export function OrderCreation() {
     );
 
     if (anyNegativeCost) {
-      setCustomerError(
-        'Existe produto com preço de custo inválido.'
-      );
+      setCustomerError('Existe produto com preço de custo inválido.');
       return;
     }
 
@@ -300,6 +312,7 @@ export function OrderCreation() {
       setSelectedCustomerId('');
       setCustomerQuery('');
       setCustomerError(null);
+      setProductQuery('');
       setSuccess(true);
 
       setTimeout(() => setSuccess(false), 3000);
@@ -330,10 +343,19 @@ export function OrderCreation() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2 space-y-4">
-        <h2 className="text-2xl font-bold text-gray-900">Produtos Disponíveis</h2>
+        <div className="space-y-3">
+          <h2 className="text-2xl font-bold text-gray-900">Produtos Disponíveis</h2>
+
+          <input
+            value={productQuery}
+            onChange={(e) => setProductQuery(e.target.value)}
+            placeholder="Buscar produto por nome ou descrição..."
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+          />
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {products.map((product) => {
+          {filteredProducts.map((product) => {
             const inCart = cart.find((item) => item.product.id === product.id);
             const availableStock = product.stock_quantity - (inCart?.quantity || 0);
 
@@ -381,10 +403,14 @@ export function OrderCreation() {
           })}
         </div>
 
-        {products.length === 0 && (
+        {filteredProducts.length === 0 && (
           <div className="text-center py-12 bg-gray-50 rounded-xl">
             <Package className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-600">Nenhum produto disponível em estoque</p>
+            <p className="text-gray-600">
+              {products.length === 0
+                ? 'Nenhum produto disponível em estoque'
+                : 'Nenhum produto encontrado para essa busca'}
+            </p>
           </div>
         )}
       </div>
