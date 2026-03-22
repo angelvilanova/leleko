@@ -204,6 +204,16 @@ export function OperatorDashboard() {
               font-size: 12px;
             }
 
+            .customer-name {
+              font-size: 18px;
+              font-weight: 900;
+              margin-bottom: 6px;
+              text-transform: uppercase;
+              text-align: center;
+              line-height: 1.2;
+              word-break: break-word;
+            }
+
             .cut-line {
               border-top: 2px dashed #000;
               margin: 10px 0;
@@ -320,7 +330,7 @@ export function OperatorDashboard() {
               ${
                 order.customers
                   ? `
-                    <div class="customer-line"><strong>Nome:</strong> ${order.customers.name || 'Não informado'}</div>
+                    <div class="customer-name">${order.customers.name || 'NÃO INFORMADO'}</div>
                     <div class="customer-line"><strong>Telefone:</strong> ${order.customers.phone || 'Não informado'}</div>
                     <div class="customer-line"><strong>Endereço:</strong> ${order.customers.address || 'Não informado'}</div>
                   `
@@ -345,7 +355,7 @@ export function OperatorDashboard() {
             ${
               order.customers
                 ? `
-                  <div class="line"><strong>Nome:</strong> ${order.customers.name || 'Não informado'}</div>
+                  <div class="customer-name">${order.customers.name || 'NÃO INFORMADO'}</div>
                   <div class="line"><strong>Telefone:</strong> ${order.customers.phone || 'Não informado'}</div>
                   <div class="line"><strong>Endereço:</strong> ${order.customers.address || 'Não informado'}</div>
                 `
