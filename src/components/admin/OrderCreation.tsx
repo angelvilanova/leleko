@@ -132,7 +132,14 @@ export function OrderCreation() {
         );
       }
     } else {
-      setCart([...cart, { product, quantity: 1 }]);
+      setCart([
+        ...cart,
+        {
+          product,
+          quantity: 1,
+          unit_price: Number(product.price || 0),
+        },
+      ]);
     }
   };
 
@@ -155,6 +162,21 @@ export function OrderCreation() {
           return item;
         })
         .filter((item) => item.quantity > 0)
+    );
+  };
+
+  const updateUnitPrice = (productId: string, value: string) => {
+    const parsed = Number(value);
+
+    setCart((prev) =>
+      prev.map((item) =>
+        item.product.id === productId
+          ? {
+              ...item,
+              unit_price: Number.isFinite(parsed) ? Math.max(0, parsed) : 0,
+            }
+          : item
+      )
     );
   };
 
@@ -243,12 +265,12 @@ export function OrderCreation() {
     }
 
     const anyZeroPrice = cart.some(
-      (item) => !item.product.price || item.product.price <= 0
+      (item) => !item.unit_price || item.unit_price <= 0
     );
 
     if (anyZeroPrice) {
       setCustomerError(
-        'Existe produto no carrinho sem preço de venda. Cadastre o preço do produto antes de criar o pedido.'
+        'Existe item no carrinho sem preço de venda válido.'
       );
       return;
     }
@@ -287,7 +309,7 @@ export function OrderCreation() {
         order_id: order.id,
         product_id: item.product.id,
         quantity: item.quantity,
-        unit_price: Number(item.product.price || 0),
+        unit_price: Number(item.unit_price || 0),
         unit_cost: Number(item.product.cost_price || 0),
       }));
 
@@ -330,7 +352,7 @@ export function OrderCreation() {
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const totalValue = cart.reduce(
-    (sum, item) => sum + item.quantity * Number(item.product.price ?? 0),
+    (sum, item) => sum + item.quantity * Number(item.unit_price ?? 0),
     0
   );
 
@@ -373,7 +395,7 @@ export function OrderCreation() {
                     )}
 
                     <p className="text-sm text-gray-700 mt-1">
-                      Preço:{' '}
+                      Preço padrão:{' '}
                       <span className="font-semibold">
                         {formatCurrency(product.price ?? 0)}
                       </span>
@@ -495,13 +517,30 @@ export function OrderCreation() {
                 {cart.map((item) => (
                   <div key={item.product.id} className="bg-gray-50 p-3 rounded-lg">
                     <div className="flex items-start justify-between mb-2">
-                      <div>
+                      <div className="min-w-0">
                         <h4 className="font-medium text-gray-900 text-sm">
                           {item.product.name}
                         </h4>
-                        <p className="text-xs text-gray-600">
-                          {formatCurrency(item.product.price ?? 0)}
+
+                        <p className="text-xs text-gray-500 mt-1">
+                          Preço padrão: {formatCurrency(item.product.price ?? 0)}
                         </p>
+
+                        <div className="mt-2">
+                          <label className="block text-xs text-gray-600 mb-1">
+                            Preço aplicado no pedido
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={item.unit_price}
+                            onChange={(e) =>
+                              updateUnitPrice(item.product.id, e.target.value)
+                            }
+                            className="w-28 border border-gray-300 rounded px-2 py-1 text-sm"
+                          />
+                        </div>
                       </div>
 
                       <button
@@ -512,7 +551,7 @@ export function OrderCreation() {
                       </button>
                     </div>
 
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mt-3">
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => updateQuantity(item.product.id, -1)}
@@ -535,7 +574,7 @@ export function OrderCreation() {
                       </div>
 
                       <span className="text-sm font-semibold text-gray-900">
-                        {formatCurrency(item.quantity * Number(item.product.price ?? 0))}
+                        {formatCurrency(item.quantity * Number(item.unit_price ?? 0))}
                       </span>
                     </div>
                   </div>
