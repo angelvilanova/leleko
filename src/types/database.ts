@@ -60,9 +60,11 @@ export interface OrderWithItems extends Order {
   })[];
 
   profiles?: Profile | null;
+  customers?: Customer | null;
 }
 
 export interface CartItem {
   product: Product;
   quantity: number;
+  unit_price: number;
 }
