@@ -488,30 +488,30 @@ export function OrderManagement() {
             return (
               <div key={order.id} className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden">
                 <div className="p-5 flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <button
-                        onClick={() => setExpandedId(expanded ? null : order.id)}
-                        className="text-left"
-                        title="Expandir/Fechar"
-                      >
-                        <div className="text-lg font-bold text-gray-900">{order.order_number}</div>
-                        <div className="text-sm text-gray-600">
-                          Criado em: {new Date(order.created_at).toLocaleString('pt-BR')}
-                        </div>
-                        {order.dispatched_at && (
+                  <div className="min-w-0 flex-1">
+                    <button
+                      onClick={() => setExpandedId(expanded ? null : order.id)}
+                      className="text-left w-full"
+                      title="Expandir/Fechar"
+                    >
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <div>
+                          <div className="text-lg font-bold text-gray-900">{order.order_number}</div>
                           <div className="text-sm text-gray-600">
-                            Despachado em: {new Date(order.dispatched_at).toLocaleString('pt-BR')}
+                            Criado em: {new Date(order.created_at).toLocaleString('pt-BR')}
                           </div>
-                        )}
-                      </button>
+                          {order.dispatched_at && (
+                            <div className="text-sm text-gray-600">
+                              Despachado em: {new Date(order.dispatched_at).toLocaleString('pt-BR')}
+                            </div>
+                          )}
+                        </div>
 
-                      <span
-                        className={`text-xs px-3 py-1 rounded-full border ${statusClasses[order.status]}`}
-                      >
-                        Status: <span className="font-semibold">{statusLabel[order.status]}</span>
-                      </span>
-                    </div>
+                        <span className={`text-xs px-3 py-1 rounded-full border ${statusClasses[order.status]}`}>
+                          Status: <span className="font-semibold">{statusLabel[order.status]}</span>
+                        </span>
+                      </div>
+                    </button>
 
                     <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
                       <div className="flex items-center gap-2 mb-1 text-blue-900 font-semibold">
