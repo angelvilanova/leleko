@@ -21,7 +21,9 @@ type OrderItem = {
   order_id: string;
   product_id: string;
   quantity: number;
-  products: Product;
+  unit_price: number;
+  unit_cost?: number;
+  products: Product | null;
 };
 
 type OrderRow = {
@@ -78,6 +80,13 @@ function addDays(date: Date, days: number) {
   const x = new Date(date);
   x.setDate(x.getDate() + days);
   return x;
+}
+
+function formatBRL(value: number) {
+  return Number(value || 0).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  });
 }
 
 export function OrderManagement() {
@@ -143,7 +152,15 @@ export function OrderManagement() {
         `
         id, order_number, status, created_at, dispatched_at, customer_id,
         customers ( id, name, phone, address ),
-        order_items ( id, order_id, product_id, quantity, products ( id, name, description, stock_quantity ) )
+        order_items (
+          id,
+          order_id,
+          product_id,
+          quantity,
+          unit_price,
+          unit_cost,
+          products ( id, name, description, stock_quantity )
+        )
       `
       )
       .order('created_at', { ascending: false });
@@ -485,6 +502,12 @@ export function OrderManagement() {
             const expanded = expandedId === order.id;
             const editing = editingId === order.id;
 
+            const orderTotal = order.order_items.reduce(
+              (sum, item) =>
+                sum + Number(item.quantity || 0) * Number(item.unit_price || 0),
+              0
+            );
+
             return (
               <div key={order.id} className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden">
                 <div className="p-5 flex items-start justify-between gap-4">
@@ -623,6 +646,10 @@ export function OrderManagement() {
                             ? products.find((p) => p.id === productId)
                             : real.products;
 
+                          const itemSubtotal = !isDraft
+                            ? Number(real.quantity || 0) * Number(real.unit_price || 0)
+                            : 0;
+
                           return (
                             <div key={isDraft ? draft.id : real.id} className="bg-gray-50 border border-gray-200 rounded-xl p-4">
                               <div className="flex items-start justify-between gap-3">
@@ -709,7 +736,12 @@ export function OrderManagement() {
                                       </button>
                                     </>
                                   ) : (
-                                    <div className="font-bold text-gray-900">{qty} un.</div>
+                                    <div className="text-right">
+                                      <div className="font-bold text-gray-900">{qty} un.</div>
+                                      <div className="text-sm text-green-700 font-semibold">
+                                        {formatBRL(itemSubtotal)}
+                                      </div>
+                                    </div>
                                   )}
                                 </div>
                               </div>
@@ -718,14 +750,25 @@ export function OrderManagement() {
                         })}
                       </div>
 
-                      <div className="pt-2 text-sm text-gray-700 flex items-center justify-between">
-                        <span className="font-semibold">Total de itens:</span>
-                        <span className="font-bold">
-                          {(editing ? draftItems : order.order_items).reduce(
-                            (sum: number, i: any) => sum + (i.quantity || 0),
-                            0
-                          )}
-                        </span>
+                      <div className="pt-2 space-y-2">
+                        <div className="text-sm text-gray-700 flex items-center justify-between">
+                          <span className="font-semibold">Total de itens:</span>
+                          <span className="font-bold">
+                            {(editing ? draftItems : order.order_items).reduce(
+                              (sum: number, i: any) => sum + (i.quantity || 0),
+                              0
+                            )}
+                          </span>
+                        </div>
+
+                        {!editing && (
+                          <div className="text-sm text-gray-700 flex items-center justify-between">
+                            <span className="font-semibold">Total do pedido:</span>
+                            <span className="font-bold text-green-700">
+                              {formatBRL(orderTotal)}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       {editing && (
