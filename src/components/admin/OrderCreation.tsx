@@ -42,6 +42,7 @@ export function OrderCreation() {
   const [customerError, setCustomerError] = useState<string | null>(null);
 
   const [productQuery, setProductQuery] = useState('');
+  const [cashDate, setCashDate] = useState('');
 
   const normalizePhone = (v: string) => v.replace(/\D/g, '');
 
@@ -269,9 +270,7 @@ export function OrderCreation() {
     );
 
     if (anyZeroPrice) {
-      setCustomerError(
-        'Existe item no carrinho sem preço de venda válido.'
-      );
+      setCustomerError('Existe item no carrinho sem preço de venda válido.');
       return;
     }
 
@@ -289,6 +288,8 @@ export function OrderCreation() {
 
     try {
       const orderNumber = generateOrderNumber();
+      const todayYmd = new Date().toISOString().slice(0, 10);
+      const effectiveCashDate = cashDate || todayYmd;
 
       const { data: order, error: orderError } = await supabase
         .from('orders')
@@ -298,6 +299,7 @@ export function OrderCreation() {
             status: 'pending',
             created_by: profile.id,
             customer_id: selectedCustomerId,
+            cash_date: effectiveCashDate,
           },
         ])
         .select()
@@ -335,6 +337,7 @@ export function OrderCreation() {
       setCustomerQuery('');
       setCustomerError(null);
       setProductQuery('');
+      setCashDate('');
       setSuccess(true);
 
       setTimeout(() => setSuccess(false), 3000);
@@ -379,7 +382,8 @@ export function OrderCreation() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredProducts.map((product) => {
             const inCart = cart.find((item) => item.product.id === product.id);
-            const availableStock = product.stock_quantity - (inCart?.quantity || 0);
+            const availableStock =
+              product.stock_quantity - (inCart?.quantity || 0);
 
             return (
               <div
@@ -581,7 +585,22 @@ export function OrderCreation() {
                 ))}
               </div>
 
-              <div className="border-t pt-4 space-y-2">
+              <div className="border-t pt-4 space-y-3">
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">
+                    Data do caixa
+                  </label>
+                  <input
+                    type="date"
+                    value={cashDate}
+                    onChange={(e) => setCashDate(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Se não preencher, será usada a data atual.
+                  </p>
+                </div>
+
                 <div className="flex items-center justify-between">
                   <span className="text-gray-700">Total de itens:</span>
                   <span className="font-bold text-lg text-gray-900">{totalItems}</span>
