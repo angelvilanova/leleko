@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Customer } from '../../types/database';
-import { Users, Plus, Trash2, Search } from 'lucide-react';
+import { Users, Plus, Trash2, Search, Edit2, X } from 'lucide-react';
 
-export function CustomerCreation() {
+export function CustomerManagement() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -17,16 +19,28 @@ export function CustomerCreation() {
 
   const phoneNorm = (v: string) => v.replace(/\D/g, '');
 
+  const resetForm = () => {
+    setName('');
+    setPhone('');
+    setAddress('');
+    setEditingCustomer(null);
+  };
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return customers;
 
+    const qPhone = phoneNorm(q);
+
     return customers.filter((c) => {
-      const p = phoneNorm(c.phone);
+      const customerName = (c.name || '').toLowerCase();
+      const customerAddress = (c.address || '').toLowerCase();
+      const customerPhone = phoneNorm(c.phone || '');
+
       return (
-        c.name.toLowerCase().includes(q) ||
-        c.address.toLowerCase().includes(q) ||
-        p.includes(phoneNorm(q))
+        customerName.includes(q) ||
+        customerAddress.includes(q) ||
+        (qPhone && customerPhone.includes(qPhone))
       );
     });
   }, [customers, query]);
@@ -53,7 +67,15 @@ export function CustomerCreation() {
     loadCustomers();
   }, []);
 
-  async function createCustomer() {
+  function handleEdit(customer: Customer) {
+    setEditingCustomer(customer);
+    setName(customer.name || '');
+    setPhone(customer.phone || '');
+    setAddress(customer.address || '');
+    setMessage(null);
+  }
+
+  async function saveCustomer() {
     setMessage(null);
 
     const n = name.trim();
@@ -67,29 +89,52 @@ export function CustomerCreation() {
 
     setSaving(true);
     try {
-      // evita duplicar pelo telefone (opcional)
-      const { data: existing } = await supabase
+      const { data: existing, error: existingError } = await supabase
         .from('customers')
         .select('id')
         .eq('phone', p)
         .maybeSingle();
 
-      if (existing?.id) {
+      if (existingError) throw existingError;
+
+      if (existing?.id && existing.id !== editingCustomer?.id) {
         setMessage({ type: 'err', text: 'Já existe um cliente com esse telefone.' });
         return;
       }
 
-      const { error } = await supabase.from('customers').insert([{ name: n, phone: p, address: a }]);
-      if (error) throw error;
+      if (editingCustomer) {
+        const { error } = await supabase
+          .from('customers')
+          .update({
+            name: n,
+            phone: p,
+            address: a,
+          })
+          .eq('id', editingCustomer.id);
 
-      setName('');
-      setPhone('');
-      setAddress('');
-      setMessage({ type: 'ok', text: 'Cliente cadastrado com sucesso!' });
+        if (error) throw error;
+
+        setMessage({ type: 'ok', text: 'Cliente atualizado com sucesso!' });
+      } else {
+        const { error } = await supabase
+          .from('customers')
+          .insert([{ name: n, phone: p, address: a }]);
+
+        if (error) throw error;
+
+        setMessage({ type: 'ok', text: 'Cliente cadastrado com sucesso!' });
+      }
+
+      resetForm();
       await loadCustomers();
     } catch (e) {
       console.error(e);
-      setMessage({ type: 'err', text: 'Erro ao cadastrar cliente (confira RLS/policies).' });
+      setMessage({
+        type: 'err',
+        text: editingCustomer
+          ? 'Erro ao atualizar cliente (confira RLS/policies).'
+          : 'Erro ao cadastrar cliente (confira RLS/policies).',
+      });
     } finally {
       setSaving(false);
     }
@@ -97,10 +142,20 @@ export function CustomerCreation() {
 
   async function deleteCustomer(id: string) {
     setMessage(null);
+
+    const ok = window.confirm('Deseja realmente remover este cliente?');
+    if (!ok) return;
+
     try {
       const { error } = await supabase.from('customers').delete().eq('id', id);
       if (error) throw error;
+
       setCustomers((prev) => prev.filter((c) => c.id !== id));
+
+      if (editingCustomer?.id === id) {
+        resetForm();
+      }
+
       setMessage({ type: 'ok', text: 'Cliente removido.' });
     } catch (e) {
       console.error(e);
@@ -108,7 +163,9 @@ export function CustomerCreation() {
     }
   }
 
-  if (loading) return <div className="text-center py-8">Carregando clientes...</div>;
+  if (loading) {
+    return <div className="text-center py-8">Carregando clientes...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -118,7 +175,21 @@ export function CustomerCreation() {
       </div>
 
       <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-        <h3 className="font-semibold text-gray-900 mb-4">Novo cliente</h3>
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <h3 className="font-semibold text-gray-900">
+            {editingCustomer ? 'Editar cliente' : 'Novo cliente'}
+          </h3>
+
+          {editingCustomer && (
+            <button
+              onClick={resetForm}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm"
+            >
+              <X className="w-4 h-4" />
+              Cancelar edição
+            </button>
+          )}
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -153,12 +224,16 @@ export function CustomerCreation() {
         </div>
 
         <button
-          onClick={createCustomer}
+          onClick={saveCustomer}
           disabled={saving}
           className="mt-4 bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition disabled:opacity-50 flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
-          {saving ? 'Salvando...' : 'Cadastrar'}
+          {saving
+            ? 'Salvando...'
+            : editingCustomer
+            ? 'Atualizar cliente'
+            : 'Cadastrar'}
         </button>
 
         {message && (
@@ -175,7 +250,7 @@ export function CustomerCreation() {
       </div>
 
       <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-        <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
           <h3 className="font-semibold text-gray-900">Clientes cadastrados</h3>
 
           <div className="flex items-center gap-2 border border-gray-300 rounded-lg px-3 py-2">
@@ -194,20 +269,33 @@ export function CustomerCreation() {
         ) : (
           <div className="space-y-3">
             {filtered.map((c) => (
-              <div key={c.id} className="bg-gray-50 p-4 rounded-lg flex items-start justify-between gap-4">
+              <div
+                key={c.id}
+                className="bg-gray-50 p-4 rounded-lg flex items-start justify-between gap-4"
+              >
                 <div>
                   <p className="font-semibold text-gray-900">{c.name}</p>
                   <p className="text-sm text-gray-700">Telefone: {c.phone}</p>
                   <p className="text-sm text-gray-700">Endereço: {c.address}</p>
                 </div>
 
-                <button
-                  onClick={() => deleteCustomer(c.id)}
-                  className="text-red-600 hover:text-red-800 transition"
-                  title="Remover"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => handleEdit(c)}
+                    className="text-blue-600 hover:text-blue-800 transition"
+                    title="Editar"
+                  >
+                    <Edit2 className="w-5 h-5" />
+                  </button>
+
+                  <button
+                    onClick={() => deleteCustomer(c.id)}
+                    className="text-red-600 hover:text-red-800 transition"
+                    title="Remover"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
