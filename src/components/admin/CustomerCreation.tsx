@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase';
 import type { Customer } from '../../types/database';
 import { Users, Plus, Trash2, Search, Edit2, X } from 'lucide-react';
 
-export function CustomerManagement() {
+export function CustomerCreation() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -132,8 +132,8 @@ export function CustomerManagement() {
       setMessage({
         type: 'err',
         text: editingCustomer
-          ? 'Erro ao atualizar cliente (confira RLS/policies).'
-          : 'Erro ao cadastrar cliente (confira RLS/policies).',
+          ? 'Erro ao atualizar cliente.'
+          : 'Erro ao cadastrar cliente.',
       });
     } finally {
       setSaving(false);
