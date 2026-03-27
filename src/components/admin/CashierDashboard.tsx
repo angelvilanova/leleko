@@ -39,18 +39,34 @@ function formatBRL(v: number) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+function toYMD(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function fromYMD(ymd: string) {
+  const [y, m, d] = ymd.split('-').map(Number);
+  return new Date(y, m - 1, d, 0, 0, 0, 0);
+}
+
 export function CashierDashboard() {
   const [loading, setLoading] = useState(true);
-  const [rowsToday, setRowsToday] = useState<Row[]>([]);
+  const [rowsDay, setRowsDay] = useState<Row[]>([]);
   const [rowsMonth, setRowsMonth] = useState<Row[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const now = new Date();
-  const todayStart = startOfDay(now);
-  const tomorrowStart = startOfDay(addDays(now, 1));
-  const monthStart = startOfMonth(now);
+  const [selectedDate, setSelectedDate] = useState(toYMD(now));
+
+  const selectedDay = fromYMD(selectedDate);
+  const dayStart = startOfDay(selectedDay);
+  const nextDayStart = startOfDay(addDays(selectedDay, 1));
+
+  const monthStart = startOfMonth(selectedDay);
   const nextMonthStart = startOfMonth(
-    addDays(new Date(now.getFullYear(), now.getMonth(), 1), 32)
+    addDays(new Date(selectedDay.getFullYear(), selectedDay.getMonth(), 1), 32)
   );
 
   async function load() {
@@ -73,12 +89,12 @@ export function CashierDashboard() {
         `
         )
         .eq('status', 'dispatched')
-        .gte('dispatched_at', todayStart.toISOString())
-        .lt('dispatched_at', tomorrowStart.toISOString())
+        .gte('dispatched_at', dayStart.toISOString())
+        .lt('dispatched_at', nextDayStart.toISOString())
         .order('dispatched_at', { ascending: false });
 
       if (e1) throw e1;
-      setRowsToday((d1 || []) as Row[]);
+      setRowsDay((d1 || []) as Row[]);
 
       const { data: d2, error: e2 } = await supabase
         .from('orders')
@@ -113,9 +129,9 @@ export function CashierDashboard() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [selectedDate]);
 
-  const todayStats = useMemo(() => buildStats(rowsToday), [rowsToday]);
+  const dayStats = useMemo(() => buildStats(rowsDay), [rowsDay]);
   const monthStats = useMemo(() => buildStats(rowsMonth), [rowsMonth]);
 
   if (loading) {
@@ -128,18 +144,34 @@ export function CashierDashboard() {
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Caixa</h2>
           <p className="text-sm text-gray-600">
-            Hoje: {todayStart.toLocaleDateString('pt-BR')} • Mês:{' '}
+            Dia selecionado: {dayStart.toLocaleDateString('pt-BR')} • Mês:{' '}
             {monthStart.toLocaleDateString('pt-BR')}
           </p>
         </div>
 
-        <button
-          onClick={load}
-          className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 flex items-center gap-2"
-        >
-          <RefreshCcw className="w-4 h-4" />
-          Atualizar
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="px-3 py-2 rounded-lg border border-gray-300 text-sm"
+          />
+
+          <button
+            onClick={() => setSelectedDate(toYMD(new Date()))}
+            className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm"
+          >
+            Hoje
+          </button>
+
+          <button
+            onClick={load}
+            className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 flex items-center gap-2"
+          >
+            <RefreshCcw className="w-4 h-4" />
+            Atualizar
+          </button>
+        </div>
       </div>
 
       {errorMsg && (
@@ -152,40 +184,40 @@ export function CashierDashboard() {
         <div className="bg-white rounded-xl border border-gray-200 shadow-md p-5">
           <div className="flex items-center gap-2 text-gray-700 mb-2">
             <CalendarDays className="w-5 h-5" />
-            <span className="font-semibold">Faturamento hoje</span>
+            <span className="font-semibold">Faturamento do dia</span>
           </div>
           <div className="text-3xl font-bold text-gray-900">
-            {formatBRL(todayStats.totalRevenue)}
+            {formatBRL(dayStats.totalRevenue)}
           </div>
           <div className="text-sm text-gray-600 mt-2">
-            Pedidos: <span className="font-semibold">{todayStats.ordersCount}</span> •
-            Itens: <span className="font-semibold">{todayStats.totalItems}</span>
+            Pedidos: <span className="font-semibold">{dayStats.ordersCount}</span> •
+            Itens: <span className="font-semibold">{dayStats.totalItems}</span>
           </div>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-md p-5">
           <div className="flex items-center gap-2 text-gray-700 mb-2">
             <DollarSign className="w-5 h-5" />
-            <span className="font-semibold">Custo hoje</span>
+            <span className="font-semibold">Custo do dia</span>
           </div>
           <div className="text-3xl font-bold text-orange-600">
-            {formatBRL(todayStats.totalCost)}
+            {formatBRL(dayStats.totalCost)}
           </div>
           <div className="text-sm text-gray-600 mt-2">
-            Ticket bruto: <span className="font-semibold">{formatBRL(todayStats.totalRevenue)}</span>
+            Ticket bruto: <span className="font-semibold">{formatBRL(dayStats.totalRevenue)}</span>
           </div>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-md p-5">
           <div className="flex items-center gap-2 text-gray-700 mb-2">
             <TrendingUp className="w-5 h-5" />
-            <span className="font-semibold">Lucro líquido hoje</span>
+            <span className="font-semibold">Lucro líquido do dia</span>
           </div>
           <div className="text-3xl font-bold text-green-600">
-            {formatBRL(todayStats.totalProfit)}
+            {formatBRL(dayStats.totalProfit)}
           </div>
           <div className="text-sm text-gray-600 mt-2">
-            Margem: <span className="font-semibold">{todayStats.margin}%</span>
+            Margem: <span className="font-semibold">{dayStats.margin}%</span>
           </div>
         </div>
       </div>
@@ -233,7 +265,7 @@ export function CashierDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <RankingCard title="Resultado por produto (hoje)" items={todayStats.byProduct} />
+        <RankingCard title="Resultado por produto (dia)" items={dayStats.byProduct} />
         <RankingCard title="Resultado por produto (mês)" items={monthStats.byProduct} />
       </div>
     </div>
