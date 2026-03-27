@@ -35,6 +35,7 @@ export interface Order {
   created_by: string;
   dispatched_by: string | null;
   customer_id: string | null;
+  cash_date?: string | null;
   created_at: string;
   dispatched_at: string | null;
 }
@@ -67,18 +68,4 @@ export interface CartItem {
   product: Product;
   quantity: number;
   unit_price: number;
-}
-export interface Order {
-  id: string;
-  order_number: string;
-  status: OrderStatus;
-  created_by: string;
-  dispatched_by: string | null;
-  customer_id: string | null;
-
-  // ✅ NOVO CAMPO (data do caixa)
-  cash_date?: string | null;
-
-  created_at: string;
-  dispatched_at: string | null;
 }
