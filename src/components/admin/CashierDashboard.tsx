@@ -10,7 +10,7 @@ import {
 
 type Row = {
   id: string;
-  dispatched_at: string | null;
+  cash_date: string | null;
   order_items: Array<{
     quantity: number;
     unit_price: number;
@@ -19,24 +19,11 @@ type Row = {
   }>;
 };
 
-function startOfDay(d: Date) {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
-
-function startOfMonth(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
-}
-
-function addDays(d: Date, days: number) {
-  const x = new Date(d);
-  x.setDate(x.getDate() + days);
-  return x;
-}
-
 function formatBRL(v: number) {
-  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  return Number(v || 0).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  });
 }
 
 function toYMD(date: Date) {
@@ -51,6 +38,15 @@ function fromYMD(ymd: string) {
   return new Date(y, m - 1, d, 0, 0, 0, 0);
 }
 
+function startOfMonthYMD(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
+}
+
+function endOfMonthYMD(date: Date) {
+  const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+  return toYMD(lastDay);
+}
+
 export function CashierDashboard() {
   const [loading, setLoading] = useState(true);
   const [rowsDay, setRowsDay] = useState<Row[]>([]);
@@ -61,13 +57,8 @@ export function CashierDashboard() {
   const [selectedDate, setSelectedDate] = useState(toYMD(now));
 
   const selectedDay = fromYMD(selectedDate);
-  const dayStart = startOfDay(selectedDay);
-  const nextDayStart = startOfDay(addDays(selectedDay, 1));
-
-  const monthStart = startOfMonth(selectedDay);
-  const nextMonthStart = startOfMonth(
-    addDays(new Date(selectedDay.getFullYear(), selectedDay.getMonth(), 1), 32)
-  );
+  const monthStartYmd = startOfMonthYMD(selectedDay);
+  const monthEndYmd = endOfMonthYMD(selectedDay);
 
   async function load() {
     setLoading(true);
@@ -79,7 +70,7 @@ export function CashierDashboard() {
         .select(
           `
           id,
-          dispatched_at,
+          cash_date,
           order_items (
             quantity,
             unit_price,
@@ -89,9 +80,8 @@ export function CashierDashboard() {
         `
         )
         .eq('status', 'dispatched')
-        .gte('dispatched_at', dayStart.toISOString())
-        .lt('dispatched_at', nextDayStart.toISOString())
-        .order('dispatched_at', { ascending: false });
+        .eq('cash_date', selectedDate)
+        .order('cash_date', { ascending: false });
 
       if (e1) throw e1;
       setRowsDay((d1 || []) as Row[]);
@@ -101,7 +91,7 @@ export function CashierDashboard() {
         .select(
           `
           id,
-          dispatched_at,
+          cash_date,
           order_items (
             quantity,
             unit_price,
@@ -111,16 +101,16 @@ export function CashierDashboard() {
         `
         )
         .eq('status', 'dispatched')
-        .gte('dispatched_at', monthStart.toISOString())
-        .lt('dispatched_at', nextMonthStart.toISOString())
-        .order('dispatched_at', { ascending: false });
+        .gte('cash_date', monthStartYmd)
+        .lte('cash_date', monthEndYmd)
+        .order('cash_date', { ascending: false });
 
       if (e2) throw e2;
       setRowsMonth((d2 || []) as Row[]);
     } catch (err) {
       console.error(err);
       setErrorMsg(
-        'Erro ao carregar dados do caixa. Verifique RLS e as colunas unit_price e unit_cost.'
+        'Erro ao carregar dados do caixa. Verifique RLS e as colunas cash_date, unit_price e unit_cost.'
       );
     } finally {
       setLoading(false);
@@ -144,8 +134,8 @@ export function CashierDashboard() {
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Caixa</h2>
           <p className="text-sm text-gray-600">
-            Dia selecionado: {dayStart.toLocaleDateString('pt-BR')} • Mês:{' '}
-            {monthStart.toLocaleDateString('pt-BR')}
+            Dia selecionado: {selectedDay.toLocaleDateString('pt-BR')} • Mês:{' '}
+            {fromYMD(monthStartYmd).toLocaleDateString('pt-BR')}
           </p>
         </div>
 
