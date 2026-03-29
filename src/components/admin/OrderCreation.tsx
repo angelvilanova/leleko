@@ -175,14 +175,15 @@ export function OrderCreation() {
   };
 
   const updateUnitPrice = (productId: string, value: string) => {
-    const parsed = Number(value);
+    const normalized = value.replace(',', '.');
+    const parsed = parseFloat(normalized);
 
     setCart((prev) =>
       prev.map((item) =>
         item.product.id === productId
           ? {
               ...item,
-              unit_price: Number.isFinite(parsed) ? Math.max(0, parsed) : 0,
+              unit_price: Number.isFinite(parsed) ? Math.max(0, parsed) : item.unit_price,
             }
           : item
       )
@@ -329,12 +330,10 @@ export function OrderCreation() {
       if (itemsError) throw itemsError;
 
       for (const item of cart) {
-        const { error: updateError } = await supabase
-          .from('products')
-          .update({
-            stock_quantity: item.product.stock_quantity - item.quantity,
-          })
-          .eq('id', item.product.id);
+        const { error: updateError } = await supabase.rpc('decrement_stock', {
+          p_id: item.product.id,
+          qty: item.quantity,
+        });
 
         if (updateError) throw updateError;
       }
