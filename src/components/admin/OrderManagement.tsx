@@ -7,6 +7,8 @@ type Product = {
   name: string;
   description?: string | null;
   stock_quantity: number;
+  price: number;
+  cost_price: number;
 };
 
 type Customer = {
@@ -42,6 +44,8 @@ type DraftItem = {
   id: string;
   product_id: string;
   quantity: number;
+  unit_price: number;
+  unit_cost: number;
 };
 
 const statusLabel: Record<OrderRow['status'], string> = {
@@ -146,7 +150,7 @@ export function OrderManagement() {
   async function loadProducts() {
     const { data, error } = await supabase
       .from('products')
-      .select('id,name,description,stock_quantity')
+      .select('id,name,description,stock_quantity,price,cost_price')
       .order('name');
 
     if (error) {
@@ -233,6 +237,8 @@ export function OrderManagement() {
         id: it.id,
         product_id: it.product_id,
         quantity: it.quantity,
+        unit_price: Number(it.unit_price || 0),
+        unit_cost: Number(it.unit_cost || 0),
       }))
     );
     setExpandedId(order.id);
@@ -258,7 +264,13 @@ export function OrderManagement() {
 
     setDraftItems((prev) => [
       ...prev,
-      { id: tempId, product_id: firstProduct.id, quantity: 1 },
+      {
+        id: tempId,
+        product_id: firstProduct.id,
+        quantity: 1,
+        unit_price: Number(firstProduct.price || 0),
+        unit_cost: Number(firstProduct.cost_price || 0),
+      },
     ]);
   }
 
@@ -320,20 +332,31 @@ export function OrderManagement() {
       const newDraft = draftItems.filter((d) => d.id.startsWith('tmp_'));
 
       for (const d of existingDraft) {
+        const prod = products.find((p) => p.id === d.product_id);
         const { error } = await supabase
           .from('order_items')
-          .update({ product_id: d.product_id, quantity: d.quantity })
+          .update({
+            product_id: d.product_id,
+            quantity: d.quantity,
+            unit_price: d.unit_price || Number(prod?.price || 0),
+            unit_cost: d.unit_cost || Number(prod?.cost_price || 0),
+          })
           .eq('id', d.id);
 
         if (error) throw error;
       }
 
       if (newDraft.length > 0) {
-        const payload = newDraft.map((d) => ({
-          order_id: orderId,
-          product_id: d.product_id,
-          quantity: d.quantity,
-        }));
+        const payload = newDraft.map((d) => {
+          const prod = products.find((p) => p.id === d.product_id);
+          return {
+            order_id: orderId,
+            product_id: d.product_id,
+            quantity: d.quantity,
+            unit_price: d.unit_price || Number(prod?.price || 0),
+            unit_cost: d.unit_cost || Number(prod?.cost_price || 0),
+          };
+        });
 
         const { error } = await supabase.from('order_items').insert(payload);
         if (error) throw error;
@@ -681,9 +704,14 @@ export function OrderManagement() {
                                     {editing ? (
                                       <select
                                         value={productId}
-                                        onChange={(e) =>
-                                          updateDraftItem(draft.id, { product_id: e.target.value })
-                                        }
+                                        onChange={(e) => {
+                                          const selectedProd = products.find((p) => p.id === e.target.value);
+                                          updateDraftItem(draft.id, {
+                                            product_id: e.target.value,
+                                            unit_price: Number(selectedProd?.price || 0),
+                                            unit_cost: Number(selectedProd?.cost_price || 0),
+                                          });
+                                        }}
                                         className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full"
                                       >
                                         {products.map((p) => (
