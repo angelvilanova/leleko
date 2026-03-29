@@ -278,6 +278,17 @@ export function OrderManagement() {
     setSaving(true);
 
     try {
+      // 1. Buscar status atual do pedido e itens no banco
+      const { data: orderData, error: orderErr } = await supabase
+        .from('orders')
+        .select('status')
+        .eq('id', orderId)
+        .single();
+
+      if (orderErr) throw orderErr;
+
+      const previousStatus = orderData.status as OrderRow['status'];
+
       const { data: currentItems, error: curErr } = await supabase
         .from('order_items')
         .select('id, product_id, quantity')
@@ -291,15 +302,16 @@ export function OrderManagement() {
         quantity: number;
       }>;
 
+      // 2. Montar payload de status
       const updatePayload: {
         status: OrderRow['status'];
         dispatched_at?: string | null;
-      } = {
-        status: draftStatus,
-      };
+        cash_date?: string | null;
+      } = { status: draftStatus };
 
       if (draftStatus === 'dispatched') {
         updatePayload.dispatched_at = new Date().toISOString();
+        updatePayload.cash_date = toYMD(new Date());
       } else if (draftStatus === 'pending' || draftStatus === 'cancelled') {
         updatePayload.dispatched_at = null;
       }
@@ -311,102 +323,163 @@ export function OrderManagement() {
 
       if (stErr) throw stErr;
 
-      for (const it of current) {
-        const { data: prod, error: pErr } = await supabase
-          .from('products')
-          .select('id, stock_quantity')
-          .eq('id', it.product_id)
-          .single();
+      // 3. Lógica de estoque baseada na transição de status
+      const becomingCancelled = draftStatus === 'cancelled' && previousStatus !== 'cancelled';
+      const reopening = previousStatus === 'cancelled' && draftStatus !== 'cancelled';
 
-        if (pErr) throw pErr;
-
-        const { error: uErr } = await supabase
-          .from('products')
-          .update({ stock_quantity: (prod.stock_quantity as number) + it.quantity })
-          .eq('id', it.product_id);
-
-        if (uErr) throw uErr;
-      }
-
-      const existingDraft = draftItems.filter((d) => !d.id.startsWith('tmp_'));
-      const newDraft = draftItems.filter((d) => d.id.startsWith('tmp_'));
-
-      for (const d of existingDraft) {
-        const prod = products.find((p) => p.id === d.product_id);
-        const { error } = await supabase
-          .from('order_items')
-          .update({
-            product_id: d.product_id,
-            quantity: d.quantity,
-            unit_price: d.unit_price || Number(prod?.price || 0),
-            unit_cost: d.unit_cost || Number(prod?.cost_price || 0),
-          })
-          .eq('id', d.id);
-
-        if (error) throw error;
-      }
-
-      if (newDraft.length > 0) {
-        const payload = newDraft.map((d) => {
-          const prod = products.find((p) => p.id === d.product_id);
-          return {
-            order_id: orderId,
-            product_id: d.product_id,
-            quantity: d.quantity,
-            unit_price: d.unit_price || Number(prod?.price || 0),
-            unit_cost: d.unit_cost || Number(prod?.cost_price || 0),
-          };
-        });
-
-        const { error } = await supabase.from('order_items').insert(payload);
-        if (error) throw error;
-      }
-
-      const draftRealIds = new Set(existingDraft.map((d) => d.id));
-      const removed = current.filter((c) => !draftRealIds.has(c.id));
-
-      for (const r of removed) {
-        const { error } = await supabase.from('order_items').delete().eq('id', r.id);
-        if (error) throw error;
-      }
-
-      const { data: finalItems, error: finErr } = await supabase
-        .from('order_items')
-        .select('product_id, quantity')
-        .eq('order_id', orderId);
-
-      if (finErr) throw finErr;
-
-      const finalIt = (finalItems || []) as Array<{ product_id: string; quantity: number }>;
-
-      for (const it of finalIt) {
-        const { data: prod, error: pErr } = await supabase
-          .from('products')
-          .select('id, stock_quantity')
-          .eq('id', it.product_id)
-          .single();
-
-        if (pErr) throw pErr;
-
-        const newStock = (prod.stock_quantity as number) - it.quantity;
-        if (newStock < 0) {
-          throw new Error('Estoque insuficiente para salvar as alterações do pedido.');
+      if (becomingCancelled) {
+        // Cancelando pedido ativo: devolver estoque de todos os itens atuais
+        for (const it of current) {
+          const { error } = await supabase.rpc('increment_stock', {
+            p_id: it.product_id,
+            qty: it.quantity,
+          });
+          if (error) throw error;
         }
 
-        const { error: uErr } = await supabase
-          .from('products')
-          .update({ stock_quantity: newStock })
-          .eq('id', it.product_id);
+        // Atualizar apenas status dos itens existentes (sem mexer em estoque novamente)
+        const existingDraft = draftItems.filter((d) => !d.id.startsWith('tmp_'));
+        for (const d of existingDraft) {
+          const prod = products.find((p) => p.id === d.product_id);
+          const { error } = await supabase
+            .from('order_items')
+            .update({
+              product_id: d.product_id,
+              quantity: d.quantity,
+              unit_price: d.unit_price || Number(prod?.price || 0),
+              unit_cost: d.unit_cost || Number(prod?.cost_price || 0),
+            })
+            .eq('id', d.id);
+          if (error) throw error;
+        }
 
-        if (uErr) throw uErr;
+      } else if (reopening) {
+        // Reabrindo pedido cancelado: debitar estoque dos itens do draft
+        const existingDraft = draftItems.filter((d) => !d.id.startsWith('tmp_'));
+        const newDraft = draftItems.filter((d) => d.id.startsWith('tmp_'));
+
+        for (const d of existingDraft) {
+          const prod = products.find((p) => p.id === d.product_id);
+          const { error } = await supabase
+            .from('order_items')
+            .update({
+              product_id: d.product_id,
+              quantity: d.quantity,
+              unit_price: d.unit_price || Number(prod?.price || 0),
+              unit_cost: d.unit_cost || Number(prod?.cost_price || 0),
+            })
+            .eq('id', d.id);
+          if (error) throw error;
+
+          const { error: stockErr } = await supabase.rpc('decrement_stock', {
+            p_id: d.product_id,
+            qty: d.quantity,
+          });
+          if (stockErr) throw stockErr;
+        }
+
+        if (newDraft.length > 0) {
+          const payload = newDraft.map((d) => {
+            const prod = products.find((p) => p.id === d.product_id);
+            return {
+              order_id: orderId,
+              product_id: d.product_id,
+              quantity: d.quantity,
+              unit_price: d.unit_price || Number(prod?.price || 0),
+              unit_cost: d.unit_cost || Number(prod?.cost_price || 0),
+            };
+          });
+          const { error } = await supabase.from('order_items').insert(payload);
+          if (error) throw error;
+
+          for (const d of newDraft) {
+            const { error: stockErr } = await supabase.rpc('decrement_stock', {
+              p_id: d.product_id,
+              qty: d.quantity,
+            });
+            if (stockErr) throw stockErr;
+          }
+        }
+
+      } else {
+        // Edição normal (sem mudança de cancelled): devolve estoque antigo e aplica novo
+
+        // 3a. Devolver estoque dos itens atuais no banco
+        for (const it of current) {
+          const { error } = await supabase.rpc('increment_stock', {
+            p_id: it.product_id,
+            qty: it.quantity,
+          });
+          if (error) throw error;
+        }
+
+        const existingDraft = draftItems.filter((d) => !d.id.startsWith('tmp_'));
+        const newDraft = draftItems.filter((d) => d.id.startsWith('tmp_'));
+
+        // 3b. Atualizar itens existentes
+        for (const d of existingDraft) {
+          const prod = products.find((p) => p.id === d.product_id);
+          const { error } = await supabase
+            .from('order_items')
+            .update({
+              product_id: d.product_id,
+              quantity: d.quantity,
+              unit_price: d.unit_price || Number(prod?.price || 0),
+              unit_cost: d.unit_cost || Number(prod?.cost_price || 0),
+            })
+            .eq('id', d.id);
+          if (error) throw error;
+        }
+
+        // 3c. Inserir novos itens
+        if (newDraft.length > 0) {
+          const payload = newDraft.map((d) => {
+            const prod = products.find((p) => p.id === d.product_id);
+            return {
+              order_id: orderId,
+              product_id: d.product_id,
+              quantity: d.quantity,
+              unit_price: d.unit_price || Number(prod?.price || 0),
+              unit_cost: d.unit_cost || Number(prod?.cost_price || 0),
+            };
+          });
+          const { error } = await supabase.from('order_items').insert(payload);
+          if (error) throw error;
+        }
+
+        // 3d. Remover itens deletados do draft
+        const draftRealIds = new Set(existingDraft.map((d) => d.id));
+        const removed = current.filter((c) => !draftRealIds.has(c.id));
+        for (const r of removed) {
+          const { error } = await supabase.from('order_items').delete().eq('id', r.id);
+          if (error) throw error;
+        }
+
+        // 3e. Debitar estoque dos itens finais
+        const { data: finalItems, error: finErr } = await supabase
+          .from('order_items')
+          .select('product_id, quantity')
+          .eq('order_id', orderId);
+
+        if (finErr) throw finErr;
+
+        const finalIt = (finalItems || []) as Array<{ product_id: string; quantity: number }>;
+
+        for (const it of finalIt) {
+          const { error } = await supabase.rpc('decrement_stock', {
+            p_id: it.product_id,
+            qty: it.quantity,
+          });
+          if (error) throw new Error(`Estoque insuficiente para um ou mais produtos.`);
+        }
       }
 
       setEditingId(null);
       setDraftItems([]);
       await Promise.all([loadOrders(), loadProducts()]);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert('Não foi possível salvar. Verifique estoque/policies. (Detalhes no console)');
+      alert(`Não foi possível salvar: ${e?.message || 'Verifique estoque e policies. (Detalhes no console)'}`);
       await Promise.all([loadOrders(), loadProducts()]);
       setEditingId(null);
       setDraftItems([]);
