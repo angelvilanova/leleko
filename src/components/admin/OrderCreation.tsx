@@ -21,6 +21,14 @@ type Customer = {
   created_at?: string;
 };
 
+function getTodayYMD() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 export function OrderCreation() {
   const { profile } = useAuth();
 
@@ -42,7 +50,7 @@ export function OrderCreation() {
   const [customerError, setCustomerError] = useState<string | null>(null);
 
   const [productQuery, setProductQuery] = useState('');
-  const [cashDate, setCashDate] = useState('');
+  const [cashDate, setCashDate] = useState(getTodayYMD());
 
   const normalizePhone = (v: string) => v.replace(/\D/g, '');
 
@@ -288,8 +296,7 @@ export function OrderCreation() {
 
     try {
       const orderNumber = generateOrderNumber();
-      const todayYmd = new Date().toISOString().slice(0, 10);
-      const effectiveCashDate = cashDate || todayYmd;
+      const effectiveCashDate = cashDate || getTodayYMD();
 
       const { data: order, error: orderError } = await supabase
         .from('orders')
@@ -337,7 +344,7 @@ export function OrderCreation() {
       setCustomerQuery('');
       setCustomerError(null);
       setProductQuery('');
-      setCashDate('');
+      setCashDate(getTodayYMD());
       setSuccess(true);
 
       setTimeout(() => setSuccess(false), 3000);
