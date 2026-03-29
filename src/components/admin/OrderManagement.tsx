@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Check, Edit3, Trash2, X, Plus, Minus, Package, User } from 'lucide-react';
+import { Check, Edit3, Trash2, X, Plus, Minus, Package, User, CalendarDays } from 'lucide-react';
 
 type Product = {
   id: string;
@@ -32,6 +32,7 @@ type OrderRow = {
   status: 'pending' | 'dispatched' | 'cancelled';
   created_at: string;
   dispatched_at: string | null;
+  cash_date?: string | null;
   customer_id: string | null;
   customers: Customer | null;
   order_items: OrderItem[];
@@ -89,6 +90,15 @@ function formatBRL(value: number) {
   });
 }
 
+function formatCashDate(value?: string | null) {
+  if (!value) return 'Não informada';
+
+  const parts = value.split('-');
+  if (parts.length !== 3) return value;
+
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
 export function OrderManagement() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -119,11 +129,13 @@ export function OrderManagement() {
     return orders.filter((o) => {
       const c = o.customers;
       const translatedStatus = statusLabel[o.status].toLowerCase();
+      const cashDateLabel = formatCashDate(o.cash_date).toLowerCase();
 
       return (
         o.order_number.toLowerCase().includes(q) ||
         o.status.toLowerCase().includes(q) ||
         translatedStatus.includes(q) ||
+        cashDateLabel.includes(q) ||
         (c?.name?.toLowerCase().includes(q) ?? false) ||
         (c?.phone?.toLowerCase().includes(q) ?? false) ||
         (c?.address?.toLowerCase().includes(q) ?? false)
@@ -150,7 +162,13 @@ export function OrderManagement() {
       .from('orders')
       .select(
         `
-        id, order_number, status, created_at, dispatched_at, customer_id,
+        id,
+        order_number,
+        status,
+        created_at,
+        dispatched_at,
+        cash_date,
+        customer_id,
         customers ( id, name, phone, address ),
         order_items (
           id,
@@ -528,6 +546,10 @@ export function OrderManagement() {
                               Despachado em: {new Date(order.dispatched_at).toLocaleString('pt-BR')}
                             </div>
                           )}
+                          <div className="text-sm text-gray-600 flex items-center gap-1">
+                            <CalendarDays className="w-4 h-4" />
+                            Data do caixa: {formatCashDate(order.cash_date)}
+                          </div>
                         </div>
 
                         <span className={`text-xs px-3 py-1 rounded-full border ${statusClasses[order.status]}`}>
