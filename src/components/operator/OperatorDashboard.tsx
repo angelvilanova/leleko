@@ -129,6 +129,18 @@ export function OperatorDashboard() {
     }
   };
 
+  const formatPhone = (phone?: string | null): string => {
+    if (!phone) return 'Não informado';
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length === 11) {
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+    }
+    if (digits.length === 10) {
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    }
+    return phone;
+  };
+
   const formatDateTime = (date?: string | null) => {
     if (!date) return 'Não informado';
 
@@ -163,6 +175,8 @@ export function OperatorDashboard() {
           `
         )
         .join('') || '';
+
+    const phoneFormatted = formatPhone(order.customers?.phone);
 
     return `
       <!DOCTYPE html>
@@ -339,7 +353,7 @@ export function OperatorDashboard() {
                 order.customers
                   ? `
                     <div class="customer-name">${order.customers.name || 'NÃO INFORMADO'}</div>
-                    <div class="customer-line"><strong>Telefone:</strong> ${order.customers.phone || 'Não informado'}</div>
+                    <div class="customer-line"><strong>Telefone:</strong> ${phoneFormatted}</div>
                     <div class="customer-line"><strong>Endereço:</strong> ${order.customers.address || 'Não informado'}</div>
                   `
                   : `
@@ -364,7 +378,7 @@ export function OperatorDashboard() {
               order.customers
                 ? `
                   <div class="customer-name">${order.customers.name || 'NÃO INFORMADO'}</div>
-                  <div class="line"><strong>Telefone:</strong> ${order.customers.phone || 'Não informado'}</div>
+                  <div class="line"><strong>Telefone:</strong> ${phoneFormatted}</div>
                   <div class="line"><strong>Endereço:</strong> ${order.customers.address || 'Não informado'}</div>
                 `
                 : `
@@ -537,7 +551,7 @@ export function OperatorDashboard() {
                             <span className="font-semibold">Nome:</span> {order.customers.name}
                           </p>
                           <p>
-                            <span className="font-semibold">Telefone:</span> {order.customers.phone}
+                            <span className="font-semibold">Telefone:</span> {formatPhone(order.customers.phone)}
                           </p>
                           <p>
                             <span className="font-semibold">Endereço:</span> {order.customers.address}
