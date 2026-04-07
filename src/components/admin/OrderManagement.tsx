@@ -310,8 +310,12 @@ export function OrderManagement() {
       } = { status: draftStatus };
 
       if (draftStatus === 'dispatched') {
-        updatePayload.dispatched_at = new Date().toISOString();
-        updatePayload.cash_date = toYMD(new Date());
+        // Só atualiza cash_date quando o pedido está sendo despachado pela primeira vez.
+        // Se já estava despachado, preserva a data original do caixa.
+        if (previousStatus !== 'dispatched') {
+          updatePayload.dispatched_at = new Date().toISOString();
+          updatePayload.cash_date = toYMD(new Date());
+        }
       } else if (draftStatus === 'pending' || draftStatus === 'cancelled') {
         updatePayload.dispatched_at = null;
       }
