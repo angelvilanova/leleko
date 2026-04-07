@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Check, Edit3, Trash2, X, Plus, Minus, Package, User, CalendarDays } from 'lucide-react';
+import { Check, Edit3, Trash2, X, Plus, Minus, Package, User, CalendarDays, ArrowUpDown } from 'lucide-react';
 
 type Product = {
   id: string;
@@ -116,6 +116,7 @@ export function OrderManagement() {
   const [saving, setSaving] = useState(false);
 
   const [query, setQuery] = useState('');
+  const [sortAsc, setSortAsc] = useState(false);
   const [dispatchFrom, setDispatchFrom] = useState('');
   const [dispatchTo, setDispatchTo] = useState('');
 
@@ -128,24 +129,32 @@ export function OrderManagement() {
 
   const filteredOrders = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return orders;
+    let result = orders;
 
-    return orders.filter((o) => {
-      const c = o.customers;
-      const translatedStatus = statusLabel[o.status].toLowerCase();
-      const cashDateLabel = formatCashDate(o.cash_date).toLowerCase();
+    if (q) {
+      result = result.filter((o) => {
+        const c = o.customers;
+        const translatedStatus = statusLabel[o.status].toLowerCase();
+        const cashDateLabel = formatCashDate(o.cash_date).toLowerCase();
 
-      return (
-        o.order_number.toLowerCase().includes(q) ||
-        o.status.toLowerCase().includes(q) ||
-        translatedStatus.includes(q) ||
-        cashDateLabel.includes(q) ||
-        (c?.name?.toLowerCase().includes(q) ?? false) ||
-        (c?.phone?.toLowerCase().includes(q) ?? false) ||
-        (c?.address?.toLowerCase().includes(q) ?? false)
-      );
-    });
-  }, [orders, query]);
+        return (
+          o.order_number.toLowerCase().includes(q) ||
+          o.status.toLowerCase().includes(q) ||
+          translatedStatus.includes(q) ||
+          cashDateLabel.includes(q) ||
+          (c?.name?.toLowerCase().includes(q) ?? false) ||
+          (c?.phone?.toLowerCase().includes(q) ?? false) ||
+          (c?.address?.toLowerCase().includes(q) ?? false)
+        );
+      });
+    }
+
+    if (sortAsc) {
+      result = [...result].reverse();
+    }
+
+    return result;
+  }, [orders, query, sortAsc]);
 
   async function loadProducts() {
     const { data, error } = await supabase
@@ -606,6 +615,15 @@ export function OrderManagement() {
             className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm"
           >
             Limpar
+          </button>
+
+          <button
+            onClick={() => setSortAsc((prev) => !prev)}
+            className="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm flex items-center gap-1"
+            title={sortAsc ? 'Mais antigos primeiro' : 'Mais recentes primeiro'}
+          >
+            <ArrowUpDown size={16} />
+            {sortAsc ? 'Antigos' : 'Recentes'}
           </button>
         </div>
       </div>
