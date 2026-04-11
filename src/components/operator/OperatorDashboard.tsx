@@ -10,6 +10,7 @@ import {
   Truck,
   User,
   Printer,
+  FileText,
 } from 'lucide-react';
 
 type StatusConfig = {
@@ -49,6 +50,7 @@ export function OperatorDashboard() {
         .from('orders')
         .select(`
           *,
+          notes,
           customers ( id, name, phone, address ),
           profiles!orders_created_by_fkey(id, email, role),
           order_items( *, products(*) )
@@ -162,6 +164,9 @@ export function OperatorDashboard() {
             .item-note { font-size: 11px; margin-top: 2px; }
             .footer { text-align: center; font-size: 11px; margin-top: 12px; }
             .highlight { font-size: 14px; font-weight: 700; }
+            .obs-box { border: 2px solid #000; padding: 6px 8px; margin: 8px 0; }
+            .obs-title { font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
+            .obs-text { font-size: 13px; font-weight: 700; word-break: break-word; }
             @page { size: auto; margin: 4mm; }
             @media print { html, body { width: 80mm; } .ticket { width: 100%; padding: 0; } }
           </style>
@@ -176,6 +181,12 @@ export function OperatorDashboard() {
                 <div class="customer-line phone"><strong>Telefone:</strong> ${phoneFormatted}</div>
                 <div class="customer-line"><strong>Endereço:</strong> ${order.customers.address || 'Não informado'}</div>
               ` : `<div class="customer-line">Pedido sem cliente associado.</div>`}
+              ${order.notes ? `
+                <div class="obs-box">
+                  <div class="obs-title">Observação</div>
+                  <div class="obs-text">${order.notes}</div>
+                </div>
+              ` : ''}
             </div>
             <div class="cut-line"><span>Destacar aqui</span></div>
             <div class="center">
@@ -194,6 +205,13 @@ export function OperatorDashboard() {
             <div class="line"><strong>Status:</strong> ${getStatusConfig(order.status).label}</div>
             <div class="line"><strong>Criado em:</strong> ${formatDateTime(order.created_at)}</div>
             ${order.dispatched_at ? `<div class="line"><strong>Despachado em:</strong> ${formatDateTime(order.dispatched_at)}</div>` : ''}
+            ${order.notes ? `
+              <div class="divider"></div>
+              <div class="obs-box">
+                <div class="obs-title">Observação</div>
+                <div class="obs-text">${order.notes}</div>
+              </div>
+            ` : ''}
             <div class="divider"></div>
             <div class="section-title">Itens do pedido</div>
             <table><tbody>${itemsHtml}</tbody></table>
@@ -323,6 +341,17 @@ export function OperatorDashboard() {
                         <p className="text-sm text-blue-700">Sem cliente associado.</p>
                       )}
                     </div>
+
+                    {/* Notes */}
+                    {order.notes && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <FileText className="w-4 h-4 text-amber-600" />
+                          <h4 className="font-semibold text-amber-900 text-sm">Observação</h4>
+                        </div>
+                        <p className="text-sm text-amber-800 whitespace-pre-line">{order.notes}</p>
+                      </div>
+                    )}
 
                     {/* Items list */}
                     <div className="space-y-1.5 mb-3">

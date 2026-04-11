@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Check, Edit3, Trash2, X, Plus, Minus, Package, User, CalendarDays, ArrowUpDown } from 'lucide-react';
+import { Check, Edit3, Trash2, X, Plus, Minus, Package, User, CalendarDays, ArrowUpDown, FileText } from 'lucide-react';
 
 type Product = {
   id: string;
@@ -35,6 +35,7 @@ type OrderRow = {
   created_at: string;
   dispatched_at: string | null;
   cash_date?: string | null;
+  notes?: string | null;
   customer_id: string | null;
   customers: Customer | null;
   order_items: OrderItem[];
@@ -181,6 +182,7 @@ export function OrderManagement() {
         created_at,
         dispatched_at,
         cash_date,
+        notes,
         customer_id,
         customers ( id, name, phone, address ),
         order_items (
@@ -690,6 +692,15 @@ export function OrderManagement() {
                         <div className="text-blue-900">Sem cliente associado</div>
                       )}
                     </div>
+
+                    {order.notes && (
+                      <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
+                        <div className="flex items-center gap-2 mb-1 text-amber-900 font-semibold">
+                          <FileText className="w-4 h-4" /> Observação
+                        </div>
+                        <p className="text-amber-800 whitespace-pre-line">{order.notes}</p>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2">

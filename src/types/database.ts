@@ -36,6 +36,7 @@ export interface Order {
   dispatched_by: string | null;
   customer_id: string | null;
   cash_date?: string | null;
+  notes?: string | null;
   created_at: string;
   dispatched_at: string | null;
 }
