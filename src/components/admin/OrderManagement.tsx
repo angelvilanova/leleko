@@ -113,6 +113,7 @@ export function OrderManagement() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftStatus, setDraftStatus] = useState<OrderRow['status']>('pending');
+  const [draftCashDate, setDraftCashDate] = useState<string>('');
   const [draftItems, setDraftItems] = useState<DraftItem[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -243,6 +244,7 @@ export function OrderManagement() {
   function startEdit(order: OrderRow) {
     setEditingId(order.id);
     setDraftStatus(order.status);
+    setDraftCashDate(order.cash_date || toYMD(new Date()));
     setDraftItems(
       order.order_items.map((it) => ({
         id: it.id,
@@ -258,6 +260,7 @@ export function OrderManagement() {
   function cancelEdit() {
     setEditingId(null);
     setDraftItems([]);
+    setDraftCashDate('');
   }
 
   function updateDraftItem(itemId: string, patch: Partial<DraftItem>) {
@@ -321,14 +324,18 @@ export function OrderManagement() {
       } = { status: draftStatus };
 
       if (draftStatus === 'dispatched') {
-        // Só atualiza cash_date quando o pedido está sendo despachado pela primeira vez.
-        // Se já estava despachado, preserva a data original do caixa.
+        // Só atualiza dispatched_at quando o pedido está sendo despachado pela primeira vez.
         if (previousStatus !== 'dispatched') {
           updatePayload.dispatched_at = new Date().toISOString();
-          updatePayload.cash_date = toYMD(new Date());
         }
       } else if (draftStatus === 'pending' || draftStatus === 'cancelled') {
         updatePayload.dispatched_at = null;
+      }
+
+      // Sempre persistir a data do caixa escolhida no formulário.
+      // Atualizar isso recoloca o pedido no caixa do dia correspondente.
+      if (draftCashDate) {
+        updatePayload.cash_date = draftCashDate;
       }
 
       const { error: stErr } = await supabase
@@ -491,6 +498,7 @@ export function OrderManagement() {
 
       setEditingId(null);
       setDraftItems([]);
+      setDraftCashDate('');
       await Promise.all([loadOrders(), loadProducts()]);
     } catch (e: any) {
       console.error(e);
@@ -498,6 +506,7 @@ export function OrderManagement() {
       await Promise.all([loadOrders(), loadProducts()]);
       setEditingId(null);
       setDraftItems([]);
+      setDraftCashDate('');
     } finally {
       setSaving(false);
     }
@@ -771,6 +780,26 @@ export function OrderManagement() {
                           </div>
                         )}
                       </div>
+
+                      {editing && (
+                        <div className="flex items-center justify-between gap-3 flex-wrap bg-amber-50 border border-amber-200 rounded-lg p-3">
+                          <div>
+                            <div className="font-semibold text-amber-900 flex items-center gap-2">
+                              <CalendarDays className="w-4 h-4" />
+                              Data do caixa
+                            </div>
+                            <p className="text-xs text-amber-800 mt-1">
+                              Alterar a data move o pedido para o caixa do dia escolhido (e remove do dia anterior).
+                            </p>
+                          </div>
+                          <input
+                            type="date"
+                            value={draftCashDate}
+                            onChange={(e) => setDraftCashDate(e.target.value)}
+                            className="border border-amber-300 rounded-lg px-3 py-2 text-sm bg-white"
+                          />
+                        </div>
+                      )}
 
                       <div className="flex items-center justify-between gap-3 flex-wrap">
                         <div className="font-semibold text-gray-900">Itens do pedido</div>
