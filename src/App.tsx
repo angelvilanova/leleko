@@ -1,11 +1,9 @@
-import { useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Login } from './components/Login';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { OperatorDashboard } from './components/operator/OperatorDashboard';
-import { UsageLimitPage } from './components/UsageLimitPage';
 
-function AppContent({ onShowLanding }: { onShowLanding: () => void }) {
+function AppContent() {
   const { user, profile, loading } = useAuth();
 
   if (loading) {
@@ -39,15 +37,9 @@ function AppContent({ onShowLanding }: { onShowLanding: () => void }) {
 }
 
 function App() {
-  const [showApp, setShowApp] = useState(false);
-
-  if (!showApp) {
-    return <UsageLimitPage onBypass={() => setShowApp(true)} />;
-  }
-
   return (
     <AuthProvider>
-      <AppContent onShowLanding={() => setShowApp(false)} />
+      <AppContent />
     </AuthProvider>
   );
 }
