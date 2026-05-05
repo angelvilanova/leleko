@@ -6,6 +6,7 @@ import {
   Package,
   RefreshCcw,
   DollarSign,
+  Warehouse,
 } from 'lucide-react';
 
 type Row = {
@@ -52,6 +53,8 @@ export function CashierDashboard() {
   const [rowsDay, setRowsDay] = useState<Row[]>([]);
   const [rowsMonth, setRowsMonth] = useState<Row[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [stockBruto, setStockBruto] = useState(0);
+  const [stockLiquido, setStockLiquido] = useState(0);
 
   const now = new Date();
   const [selectedDate, setSelectedDate] = useState(toYMD(now));
@@ -107,6 +110,22 @@ export function CashierDashboard() {
 
       if (e2) throw e2;
       setRowsMonth((d2 || []) as Row[]);
+
+      const { data: products, error: e3 } = await supabase
+        .from('products')
+        .select('stock_quantity, price, cost_price');
+
+      if (e3) throw e3;
+
+      let bruto = 0;
+      let liquido = 0;
+      for (const p of products || []) {
+        const qty = Number(p.stock_quantity || 0);
+        bruto += qty * Number(p.price || 0);
+        liquido += qty * Number(p.cost_price || 0);
+      }
+      setStockBruto(bruto);
+      setStockLiquido(liquido);
     } catch (err) {
       console.error(err);
       setErrorMsg(
@@ -251,6 +270,34 @@ export function CashierDashboard() {
           <div className="text-sm text-gray-600 mt-2">
             Margem: <span className="font-semibold">{monthStats.margin}%</span>
           </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-md p-5">
+          <div className="flex items-center gap-2 text-gray-700 mb-2">
+            <Warehouse className="w-5 h-5" />
+            <span className="font-semibold">Estoque Bruto</span>
+          </div>
+          <div className="text-3xl font-bold text-gray-900">
+            {formatBRL(stockBruto)}
+          </div>
+          <p className="text-sm text-gray-600 mt-2">
+            Valor total do estoque a preço de venda
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 shadow-md p-5">
+          <div className="flex items-center gap-2 text-gray-700 mb-2">
+            <Warehouse className="w-5 h-5" />
+            <span className="font-semibold">Estoque Líquido</span>
+          </div>
+          <div className="text-3xl font-bold text-blue-600">
+            {formatBRL(stockLiquido)}
+          </div>
+          <p className="text-sm text-gray-600 mt-2">
+            Valor total do estoque a preço de custo
+          </p>
         </div>
       </div>
 
