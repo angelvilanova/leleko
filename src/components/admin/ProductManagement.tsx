@@ -26,6 +26,7 @@ export function ProductManagement() {
       const { data, error } = await supabase
         .from('products')
         .select('*')
+        .eq('active', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -67,7 +68,10 @@ export function ProductManagement() {
     if (!confirmed) return;
 
     try {
-      const { error } = await supabase.from('products').delete().eq('id', productId);
+      const { error } = await supabase
+        .from('products')
+        .update({ active: false })
+        .eq('id', productId);
 
       if (error) throw error;
 

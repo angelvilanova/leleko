@@ -113,7 +113,8 @@ export function CashierDashboard() {
 
       const { data: products, error: e3 } = await supabase
         .from('products')
-        .select('stock_quantity, price, cost_price');
+        .select('stock_quantity, price, cost_price')
+        .eq('active', true);
 
       if (e3) throw e3;
 

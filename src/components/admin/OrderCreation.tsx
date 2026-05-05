@@ -72,6 +72,7 @@ export function OrderCreation() {
       const { data, error } = await supabase
         .from('products')
         .select('*')
+        .eq('active', true)
         .gt('stock_quantity', 0)
         .order('name');
 

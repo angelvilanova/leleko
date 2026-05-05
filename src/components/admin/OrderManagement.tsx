@@ -162,6 +162,7 @@ export function OrderManagement() {
     const { data, error } = await supabase
       .from('products')
       .select('id,name,description,stock_quantity,price,cost_price')
+      .eq('active', true)
       .order('name');
 
     if (error) {
