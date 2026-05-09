@@ -169,12 +169,7 @@ export function CustomerCreation() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <Users className="w-6 h-6 text-blue-600" />
-        <h2 className="text-2xl font-bold text-gray-900">Cadastro de Clientes</h2>
-      </div>
-
-      <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
         <div className="flex items-center justify-between gap-3 mb-4">
           <h3 className="font-semibold text-gray-900">
             {editingCustomer ? 'Editar cliente' : 'Novo cliente'}
@@ -249,7 +244,7 @@ export function CustomerCreation() {
         )}
       </div>
 
-      <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
         <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
           <h3 className="font-semibold text-gray-900">Clientes cadastrados</h3>
 

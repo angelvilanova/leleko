@@ -151,13 +151,10 @@ export function CashierDashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Caixa</h2>
-          <p className="text-sm text-gray-600">
-            Dia selecionado: {selectedDay.toLocaleDateString('pt-BR')} • Mês:{' '}
-            {fromYMD(monthStartYmd).toLocaleDateString('pt-BR')}
-          </p>
-        </div>
+        <p className="text-sm text-slate-500">
+          Dia selecionado: {selectedDay.toLocaleDateString('pt-BR')} • Mês:{' '}
+          {fromYMD(monthStartYmd).toLocaleDateString('pt-BR')}
+        </p>
 
         <div className="flex items-center gap-2 flex-wrap">
           <input
@@ -190,115 +187,114 @@ export function CashierDashboard() {
         </div>
       )}
 
+      {/* Cards do dia */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 shadow-md p-5">
-          <div className="flex items-center gap-2 text-gray-700 mb-2">
-            <CalendarDays className="w-5 h-5" />
-            <span className="font-semibold">Faturamento do dia</span>
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-2 text-slate-500 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+              <CalendarDays className="w-4 h-4 text-blue-600" />
+            </div>
+            <span className="font-semibold text-sm">Faturamento do dia</span>
           </div>
-          <div className="text-3xl font-bold text-gray-900">
-            {formatBRL(dayStats.totalRevenue)}
-          </div>
-          <div className="text-sm text-gray-600 mt-2">
-            Pedidos: <span className="font-semibold">{dayStats.ordersCount}</span> •
-            Itens: <span className="font-semibold">{dayStats.totalItems}</span>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-200 shadow-md p-5">
-          <div className="flex items-center gap-2 text-gray-700 mb-2">
-            <DollarSign className="w-5 h-5" />
-            <span className="font-semibold">Custo do dia</span>
-          </div>
-          <div className="text-3xl font-bold text-orange-600">
-            {formatBRL(dayStats.totalCost)}
-          </div>
-          <div className="text-sm text-gray-600 mt-2">
-            Ticket bruto: <span className="font-semibold">{formatBRL(dayStats.totalRevenue)}</span>
+          <div className="text-3xl font-bold text-slate-900">{formatBRL(dayStats.totalRevenue)}</div>
+          <div className="text-sm text-slate-500 mt-2">
+            Pedidos: <span className="font-semibold text-slate-700">{dayStats.ordersCount}</span> •
+            Itens: <span className="font-semibold text-slate-700">{dayStats.totalItems}</span>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 shadow-md p-5">
-          <div className="flex items-center gap-2 text-gray-700 mb-2">
-            <TrendingUp className="w-5 h-5" />
-            <span className="font-semibold">Lucro líquido do dia</span>
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-2 text-slate-500 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
+              <DollarSign className="w-4 h-4 text-orange-600" />
+            </div>
+            <span className="font-semibold text-sm">Custo do dia</span>
           </div>
-          <div className="text-3xl font-bold text-green-600">
-            {formatBRL(dayStats.totalProfit)}
+          <div className="text-3xl font-bold text-orange-600">{formatBRL(dayStats.totalCost)}</div>
+          <div className="text-sm text-slate-500 mt-2">
+            Ticket bruto: <span className="font-semibold text-slate-700">{formatBRL(dayStats.totalRevenue)}</span>
           </div>
-          <div className="text-sm text-gray-600 mt-2">
-            Margem: <span className="font-semibold">{dayStats.margin}%</span>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-2 text-slate-500 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+              <TrendingUp className="w-4 h-4 text-emerald-600" />
+            </div>
+            <span className="font-semibold text-sm">Lucro líquido do dia</span>
+          </div>
+          <div className="text-3xl font-bold text-emerald-600">{formatBRL(dayStats.totalProfit)}</div>
+          <div className="text-sm text-slate-500 mt-2">
+            Margem: <span className="font-semibold text-slate-700">{dayStats.margin}%</span>
           </div>
         </div>
       </div>
 
+      {/* Cards do mês */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 shadow-md p-5">
-          <div className="flex items-center gap-2 text-gray-700 mb-2">
-            <CalendarDays className="w-5 h-5" />
-            <span className="font-semibold">Faturamento no mês</span>
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-2 text-slate-500 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+              <CalendarDays className="w-4 h-4 text-blue-600" />
+            </div>
+            <span className="font-semibold text-sm">Faturamento no mês</span>
           </div>
-          <div className="text-3xl font-bold text-gray-900">
-            {formatBRL(monthStats.totalRevenue)}
-          </div>
-          <div className="text-sm text-gray-600 mt-2">
-            Pedidos: <span className="font-semibold">{monthStats.ordersCount}</span> •
-            Itens: <span className="font-semibold">{monthStats.totalItems}</span>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-200 shadow-md p-5">
-          <div className="flex items-center gap-2 text-gray-700 mb-2">
-            <DollarSign className="w-5 h-5" />
-            <span className="font-semibold">Custo no mês</span>
-          </div>
-          <div className="text-3xl font-bold text-orange-600">
-            {formatBRL(monthStats.totalCost)}
-          </div>
-          <div className="text-sm text-gray-600 mt-2">
-            Ticket bruto: <span className="font-semibold">{formatBRL(monthStats.totalRevenue)}</span>
+          <div className="text-3xl font-bold text-slate-900">{formatBRL(monthStats.totalRevenue)}</div>
+          <div className="text-sm text-slate-500 mt-2">
+            Pedidos: <span className="font-semibold text-slate-700">{monthStats.ordersCount}</span> •
+            Itens: <span className="font-semibold text-slate-700">{monthStats.totalItems}</span>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 shadow-md p-5">
-          <div className="flex items-center gap-2 text-gray-700 mb-2">
-            <TrendingUp className="w-5 h-5" />
-            <span className="font-semibold">Lucro líquido no mês</span>
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-2 text-slate-500 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
+              <DollarSign className="w-4 h-4 text-orange-600" />
+            </div>
+            <span className="font-semibold text-sm">Custo no mês</span>
           </div>
-          <div className="text-3xl font-bold text-green-600">
-            {formatBRL(monthStats.totalProfit)}
+          <div className="text-3xl font-bold text-orange-600">{formatBRL(monthStats.totalCost)}</div>
+          <div className="text-sm text-slate-500 mt-2">
+            Ticket bruto: <span className="font-semibold text-slate-700">{formatBRL(monthStats.totalRevenue)}</span>
           </div>
-          <div className="text-sm text-gray-600 mt-2">
-            Margem: <span className="font-semibold">{monthStats.margin}%</span>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-2 text-slate-500 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+              <TrendingUp className="w-4 h-4 text-emerald-600" />
+            </div>
+            <span className="font-semibold text-sm">Lucro líquido no mês</span>
+          </div>
+          <div className="text-3xl font-bold text-emerald-600">{formatBRL(monthStats.totalProfit)}</div>
+          <div className="text-sm text-slate-500 mt-2">
+            Margem: <span className="font-semibold text-slate-700">{monthStats.margin}%</span>
           </div>
         </div>
       </div>
 
+      {/* Cards de estoque */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 shadow-md p-5">
-          <div className="flex items-center gap-2 text-gray-700 mb-2">
-            <Warehouse className="w-5 h-5" />
-            <span className="font-semibold">Estoque Bruto</span>
+        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl shadow-sm p-5 hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-2 text-slate-300 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+              <Warehouse className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-semibold text-sm">Estoque Bruto</span>
           </div>
-          <div className="text-3xl font-bold text-gray-900">
-            {formatBRL(stockBruto)}
-          </div>
-          <p className="text-sm text-gray-600 mt-2">
-            Valor total do estoque a preço de venda
-          </p>
+          <div className="text-3xl font-bold text-white">{formatBRL(stockBruto)}</div>
+          <p className="text-sm text-slate-400 mt-2">Valor total a preço de venda</p>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 shadow-md p-5">
-          <div className="flex items-center gap-2 text-gray-700 mb-2">
-            <Warehouse className="w-5 h-5" />
-            <span className="font-semibold">Estoque Líquido</span>
+        <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl shadow-sm p-5 hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-2 text-blue-100 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+              <Warehouse className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-semibold text-sm">Estoque Líquido</span>
           </div>
-          <div className="text-3xl font-bold text-blue-600">
-            {formatBRL(stockLiquido)}
-          </div>
-          <p className="text-sm text-gray-600 mt-2">
-            Valor total do estoque a preço de custo
-          </p>
+          <div className="text-3xl font-bold text-white">{formatBRL(stockLiquido)}</div>
+          <p className="text-sm text-blue-200 mt-2">Valor total a preço de custo</p>
         </div>
       </div>
 

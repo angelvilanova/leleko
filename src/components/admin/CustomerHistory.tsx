@@ -169,14 +169,9 @@ export function CustomerHistory() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <CalendarDays className="w-6 h-6 text-blue-600" />
-        <h2 className="text-2xl font-bold text-gray-900">Histórico por Cliente</h2>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Lista de clientes */}
-        <div className="bg-white rounded-xl shadow-md border border-gray-200 p-5">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
           <div className="flex items-center gap-2 border border-gray-300 rounded-lg px-3 py-2 mb-4">
             <Search className="w-4 h-4 text-gray-500" />
             <input

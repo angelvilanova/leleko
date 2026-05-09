@@ -42,7 +42,7 @@ export function Login() {
         </div>
 
         <h1 className="text-3xl font-bold text-center text-white mb-2">
-          Sistema de Expedição
+          Leleko
         </h1>
 
         <p className="text-center text-gray-300 mb-8">

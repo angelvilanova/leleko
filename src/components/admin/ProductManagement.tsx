@@ -132,10 +132,10 @@ export function ProductManagement() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Produtos</h2>
+        <div />
         <button
           onClick={handleNewProduct}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+          className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 transition shadow-sm shadow-blue-600/20 font-medium text-sm"
         >
           <Plus className="w-5 h-5" />
           Novo Produto
@@ -143,7 +143,7 @@ export function ProductManagement() {
       </div>
 
       {showForm && (
-        <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
           <h3 className="text-lg font-semibold mb-4">
             {editingProduct ? 'Editar Produto' : 'Novo Produto'}
           </h3>
@@ -259,7 +259,7 @@ export function ProductManagement() {
         {products.map((product) => (
           <div
             key={product.id}
-            className="bg-white p-5 rounded-xl shadow-md border border-gray-200 hover:shadow-lg transition"
+            className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow"
           >
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-2">
