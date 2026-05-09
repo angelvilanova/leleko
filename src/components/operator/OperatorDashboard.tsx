@@ -11,6 +11,7 @@ import {
   User,
   Printer,
   FileText,
+  CalendarDays,
 } from 'lucide-react';
 
 type StatusConfig = {
@@ -30,6 +31,10 @@ export function OperatorDashboard() {
   const { profile, signOut } = useAuth();
   const [orders, setOrders] = useState<OrderWithItems[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'live' | 'history'>('live');
+  const [historyDate, setHistoryDate] = useState(toYMD(new Date()));
+  const [historyOrders, setHistoryOrders] = useState<OrderWithItems[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   useEffect(() => {
     loadOrders();
@@ -43,6 +48,10 @@ export function OperatorDashboard() {
 
     return () => { supabase.removeChannel(channel); };
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'history') loadHistory();
+  }, [historyDate, activeTab]);
 
   const loadOrders = async () => {
     try {
@@ -63,6 +72,31 @@ export function OperatorDashboard() {
       console.error('Error loading orders:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          notes,
+          customers ( id, name, phone, address ),
+          profiles!orders_created_by_fkey(id, email, role),
+          order_items( id, quantity, products( name ) )
+        `)
+        .eq('status', 'dispatched')
+        .eq('cash_date', historyDate)
+        .order('dispatched_at', { ascending: false });
+
+      if (error) throw error;
+      setHistoryOrders((data as OrderWithItems[]) || []);
+    } catch (error) {
+      console.error('Error loading history:', error);
+    } finally {
+      setHistoryLoading(false);
     }
   };
 
@@ -277,139 +311,294 @@ export function OperatorDashboard() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-gray-900 sm:text-2xl">Pedidos ao Vivo</h2>
-          <div className="flex items-center gap-1.5 text-xs text-gray-500">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            Tempo real
-          </div>
+        {/* Tabs */}
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => setActiveTab('live')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
+              activeTab === 'live'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            <Truck className="w-4 h-4" />
+            Pedidos ao Vivo
+          </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
+              activeTab === 'history'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            <CalendarDays className="w-4 h-4" />
+            Histórico
+          </button>
         </div>
 
-        {orders.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-xl shadow-sm">
-            <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">Nenhum pedido encontrado</p>
-          </div>
-        ) : (
-          <div className="space-y-3 sm:space-y-4">
-            {orders.map((order) => {
-              const statusConfig = getStatusConfig(order.status);
-              const StatusIcon = statusConfig.icon;
-              const totalItems = order.order_items.reduce(
-                (sum, item) => sum + Number(item.quantity || 0), 0
-              );
+        {activeTab === 'live' && (
+          <>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-900 sm:text-2xl">Pedidos ao Vivo</h2>
+              <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                Tempo real
+              </div>
+            </div>
 
-              return (
-                <div
-                  key={order.id}
-                  className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
-                >
-                  <div className="p-4">
-                    {/* Order header */}
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-bold text-gray-900 text-base">
-                            {order.order_number}
-                          </h3>
-                          <span className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${statusConfig.color}`}>
-                            <StatusIcon className="w-3 h-3" />
-                            {statusConfig.label}
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {new Date(order.created_at).toLocaleString('pt-BR')}
-                        </p>
-                      </div>
-                    </div>
+            {orders.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-xl shadow-sm">
+                <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">Nenhum pedido encontrado</p>
+              </div>
+            ) : (
+              <div className="space-y-3 sm:space-y-4">
+                {orders.map((order) => {
+                  const statusConfig = getStatusConfig(order.status);
+                  const StatusIcon = statusConfig.icon;
+                  const totalItems = order.order_items.reduce(
+                    (sum, item) => sum + Number(item.quantity || 0), 0
+                  );
 
-                    {/* Customer */}
-                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-3">
-                      <div className="flex items-center gap-1.5 mb-1.5">
-                        <User className="w-4 h-4 text-blue-600" />
-                        <h4 className="font-semibold text-blue-900 text-sm">Cliente</h4>
-                      </div>
-                      {order.customers ? (
-                        <div className="text-sm text-blue-800 space-y-0.5">
-                          <p><span className="font-semibold">Nome:</span> {order.customers.name}</p>
-                          <p><span className="font-semibold">Tel:</span> {formatPhone(order.customers.phone)}</p>
-                          <p className="break-words">
-                            <span className="font-semibold">End:</span> {order.customers.address}
-                          </p>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-blue-700">Sem cliente associado.</p>
-                      )}
-                    </div>
-
-                    {/* Notes */}
-                    {order.notes && (
-                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3">
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <FileText className="w-4 h-4 text-amber-600" />
-                          <h4 className="font-semibold text-amber-900 text-sm">Observação</h4>
-                        </div>
-                        <p className="text-sm text-amber-800 whitespace-pre-line">{order.notes}</p>
-                      </div>
-                    )}
-
-                    {/* Items list */}
-                    <div className="space-y-1.5 mb-3">
-                      {order.order_items.map((item) => (
-                        <div
-                          key={item.id}
-                          className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg"
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <Package className="w-4 h-4 text-gray-400 shrink-0" />
-                            <span className="text-sm font-medium text-gray-800 truncate">
-                              {item.products?.name || 'Produto'}
-                            </span>
+                  return (
+                    <div
+                      key={order.id}
+                      className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+                    >
+                      <div className="p-4">
+                        {/* Order header */}
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="font-bold text-gray-900 text-base">
+                                {order.order_number}
+                              </h3>
+                              <span className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${statusConfig.color}`}>
+                                <StatusIcon className="w-3 h-3" />
+                                {statusConfig.label}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {new Date(order.created_at).toLocaleString('pt-BR')}
+                            </p>
                           </div>
-                          <span className="text-sm font-bold text-gray-900 shrink-0 ml-2">
-                            {item.quantity} un.
+                        </div>
+
+                        {/* Customer */}
+                        <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-3">
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <User className="w-4 h-4 text-blue-600" />
+                            <h4 className="font-semibold text-blue-900 text-sm">Cliente</h4>
+                          </div>
+                          {order.customers ? (
+                            <div className="text-sm text-blue-800 space-y-0.5">
+                              <p><span className="font-semibold">Nome:</span> {order.customers.name}</p>
+                              <p><span className="font-semibold">Tel:</span> {formatPhone(order.customers.phone)}</p>
+                              <p className="break-words">
+                                <span className="font-semibold">End:</span> {order.customers.address}
+                              </p>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-blue-700">Sem cliente associado.</p>
+                          )}
+                        </div>
+
+                        {/* Notes */}
+                        {order.notes && (
+                          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3">
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <FileText className="w-4 h-4 text-amber-600" />
+                              <h4 className="font-semibold text-amber-900 text-sm">Observação</h4>
+                            </div>
+                            <p className="text-sm text-amber-800 whitespace-pre-line">{order.notes}</p>
+                          </div>
+                        )}
+
+                        {/* Items list */}
+                        <div className="space-y-1.5 mb-3">
+                          {order.order_items.map((item) => (
+                            <div
+                              key={item.id}
+                              className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Package className="w-4 h-4 text-gray-400 shrink-0" />
+                                <span className="text-sm font-medium text-gray-800 truncate">
+                                  {item.products?.name || 'Produto'}
+                                </span>
+                              </div>
+                              <span className="text-sm font-bold text-gray-900 shrink-0 ml-2">
+                                {item.quantity} un.
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Total */}
+                        <div className="flex items-center justify-between py-2 border-t border-gray-100 mb-3">
+                          <span className="text-sm text-gray-600 font-medium">Total de itens:</span>
+                          <span className="text-lg font-bold text-gray-900">{totalItems} un.</span>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handlePrintOrder(order)}
+                            className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white py-2.5 rounded-xl hover:bg-blue-700 transition font-medium text-sm"
+                          >
+                            <Printer className="w-4 h-4" />
+                            Imprimir
+                          </button>
+
+                          {order.status === 'pending' && (
+                            <button
+                              onClick={() => handleDispatch(order.id)}
+                              className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white py-2.5 rounded-xl hover:bg-green-700 transition font-medium text-sm"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                              Despachar
+                            </button>
+                          )}
+                        </div>
+
+                        {order.dispatched_at && (
+                          <p className="mt-2 text-xs text-gray-400 text-center">
+                            Despachado: {new Date(order.dispatched_at).toLocaleString('pt-BR')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === 'history' && (
+          <>
+            <div className="mb-4 flex items-center justify-between flex-wrap gap-3">
+              <h2 className="text-lg font-bold text-gray-900 sm:text-2xl">Histórico de Pedidos</h2>
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={historyDate}
+                  onChange={(e) => setHistoryDate(e.target.value)}
+                  className="px-3 py-2 rounded-lg border border-gray-300 text-sm"
+                />
+                <button
+                  onClick={() => setHistoryDate(toYMD(new Date()))}
+                  className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm"
+                >
+                  Hoje
+                </button>
+              </div>
+            </div>
+
+            <p className="text-sm text-gray-500 mb-4">
+              Pedidos despachados em{' '}
+              {new Date(historyDate + 'T00:00:00').toLocaleDateString('pt-BR')}
+              {' '}— {historyOrders.length} pedido(s)
+            </p>
+
+            {historyLoading ? (
+              <div className="text-center py-12 bg-white rounded-xl shadow-sm">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-500">Carregando histórico...</p>
+              </div>
+            ) : historyOrders.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-xl shadow-sm">
+                <CalendarDays className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">Nenhum pedido despachado nesta data</p>
+              </div>
+            ) : (
+              <div className="space-y-3 sm:space-y-4">
+                {historyOrders.map((order) => {
+                  const totalItems = order.order_items.reduce(
+                    (sum, item) => sum + Number(item.quantity || 0), 0
+                  );
+
+                  return (
+                    <div
+                      key={order.id}
+                      className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+                    >
+                      <div className="p-4">
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-gray-900 text-base">
+                              {order.order_number}
+                            </h3>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Despachado: {order.dispatched_at ? new Date(order.dispatched_at).toLocaleString('pt-BR') : '—'}
+                            </p>
+                          </div>
+                          <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border bg-green-100 text-green-800 border-green-200">
+                            <Truck className="w-3 h-3" />
+                            Despachado
                           </span>
                         </div>
-                      ))}
+
+                        {/* Customer */}
+                        {order.customers && (
+                          <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-3">
+                            <div className="flex items-center gap-1.5 mb-1.5">
+                              <User className="w-4 h-4 text-blue-600" />
+                              <h4 className="font-semibold text-blue-900 text-sm">Cliente</h4>
+                            </div>
+                            <div className="text-sm text-blue-800 space-y-0.5">
+                              <p><span className="font-semibold">Nome:</span> {order.customers.name}</p>
+                              <p><span className="font-semibold">Tel:</span> {formatPhone(order.customers.phone)}</p>
+                              <p className="break-words">
+                                <span className="font-semibold">End:</span> {order.customers.address}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Notes */}
+                        {order.notes && (
+                          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3">
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <FileText className="w-4 h-4 text-amber-600" />
+                              <h4 className="font-semibold text-amber-900 text-sm">Observação</h4>
+                            </div>
+                            <p className="text-sm text-amber-800 whitespace-pre-line">{order.notes}</p>
+                          </div>
+                        )}
+
+                        {/* Items - sem valores */}
+                        <div className="space-y-1.5 mb-3">
+                          {order.order_items.map((item) => (
+                            <div
+                              key={item.id}
+                              className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Package className="w-4 h-4 text-gray-400 shrink-0" />
+                                <span className="text-sm font-medium text-gray-800 truncate">
+                                  {item.products?.name || 'Produto'}
+                                </span>
+                              </div>
+                              <span className="text-sm font-bold text-gray-900 shrink-0 ml-2">
+                                {item.quantity} un.
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="flex items-center justify-between py-2 border-t border-gray-100">
+                          <span className="text-sm text-gray-600 font-medium">Total de itens:</span>
+                          <span className="text-lg font-bold text-gray-900">{totalItems} un.</span>
+                        </div>
+                      </div>
                     </div>
-
-                    {/* Total */}
-                    <div className="flex items-center justify-between py-2 border-t border-gray-100 mb-3">
-                      <span className="text-sm text-gray-600 font-medium">Total de itens:</span>
-                      <span className="text-lg font-bold text-gray-900">{totalItems} un.</span>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handlePrintOrder(order)}
-                        className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white py-2.5 rounded-xl hover:bg-blue-700 transition font-medium text-sm"
-                      >
-                        <Printer className="w-4 h-4" />
-                        Imprimir
-                      </button>
-
-                      {order.status === 'pending' && (
-                        <button
-                          onClick={() => handleDispatch(order.id)}
-                          className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white py-2.5 rounded-xl hover:bg-green-700 transition font-medium text-sm"
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                          Despachar
-                        </button>
-                      )}
-                    </div>
-
-                    {order.dispatched_at && (
-                      <p className="mt-2 text-xs text-gray-400 text-center">
-                        Despachado: {new Date(order.dispatched_at).toLocaleString('pt-BR')}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
