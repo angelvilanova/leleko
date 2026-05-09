@@ -5,6 +5,7 @@ import { OrderCreation } from './OrderCreation';
 import { CustomerCreation } from './CustomerCreation';
 import { OrderManagement } from './OrderManagement';
 import { CashierDashboard } from './CashierDashboard';
+import { CustomerHistory } from './CustomerHistory';
 import {
   Package,
   ShoppingCart,
@@ -12,12 +13,13 @@ import {
   Users,
   ClipboardList,
   DollarSign,
+  History,
 } from 'lucide-react';
 
 export function AdminDashboard() {
   const { profile, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<
-    'products' | 'orders' | 'customers' | 'manageOrders' | 'cashier'
+    'products' | 'orders' | 'customers' | 'manageOrders' | 'cashier' | 'customerHistory'
   >('products');
 
   return (
@@ -93,6 +95,18 @@ export function AdminDashboard() {
             </button>
 
             <button
+              onClick={() => setActiveTab('customerHistory')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition ${
+                activeTab === 'customerHistory'
+                  ? 'bg-blue-600 text-white shadow-lg'
+                  : 'bg-white text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <History className="w-5 h-5" />
+              Histórico
+            </button>
+
+            <button
               onClick={() => setActiveTab('cashier')}
               className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition ${
                 activeTab === 'cashier'
@@ -111,6 +125,7 @@ export function AdminDashboard() {
           {activeTab === 'orders' && <OrderCreation />}
           {activeTab === 'manageOrders' && <OrderManagement />}
           {activeTab === 'customers' && <CustomerCreation />}
+          {activeTab === 'customerHistory' && <CustomerHistory />}
           {activeTab === 'cashier' && <CashierDashboard />}
         </div>
       </div>
