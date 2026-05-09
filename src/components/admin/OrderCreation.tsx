@@ -380,13 +380,13 @@ export function OrderCreation() {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2 space-y-4">
         <div className="space-y-3">
-          <h2 className="text-2xl font-bold text-gray-900">Produtos Disponíveis</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Produtos Disponíveis</h2>
 
           <input
             value={productQuery}
             onChange={(e) => setProductQuery(e.target.value)}
             placeholder="Buscar produto por nome ou descrição..."
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            className="w-full border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2 text-sm"
           />
         </div>
 
@@ -399,31 +399,31 @@ export function OrderCreation() {
             return (
               <div
                 key={product.id}
-                className="bg-white p-4 rounded-xl shadow-md border border-gray-200 hover:shadow-lg transition"
+                className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 hover:shadow-md transition"
               >
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <h3 className="font-semibold text-gray-900">{product.name}</h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">{product.name}</h3>
 
                     {product.description && (
-                      <p className="text-sm text-gray-600 mt-1">{product.description}</p>
+                      <p className="text-sm text-gray-600 dark:text-slate-400 mt-1">{product.description}</p>
                     )}
 
-                    <p className="text-sm text-gray-700 mt-1">
+                    <p className="text-sm text-gray-700 dark:text-slate-300 mt-1">
                       Preço padrão:{' '}
                       <span className="font-semibold">
                         {formatCurrency(product.price ?? 0)}
                       </span>
                     </p>
 
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
                       Custo: {formatCurrency(product.cost_price ?? 0)}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between mt-3">
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-gray-600 dark:text-slate-400">
                     Disponível: <span className="font-semibold">{availableStock}</span>
                   </span>
 
@@ -441,9 +441,9 @@ export function OrderCreation() {
         </div>
 
         {filteredProducts.length === 0 && (
-          <div className="text-center py-12 bg-gray-50 rounded-xl">
-            <Package className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-600">
+          <div className="text-center py-12 bg-gray-50 dark:bg-slate-700/50 rounded-xl">
+            <Package className="w-12 h-12 text-gray-400 dark:text-slate-500 mx-auto mb-3" />
+            <p className="text-gray-600 dark:text-slate-400">
               {products.length === 0
                 ? 'Nenhum produto disponível em estoque'
                 : 'Nenhum produto encontrado para essa busca'}
@@ -453,17 +453,17 @@ export function OrderCreation() {
       </div>
 
       <div className="lg:col-span-1">
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200 sticky top-6">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 sticky top-6">
           <div className="flex items-center gap-2 mb-4">
             <ShoppingCart className="w-6 h-6 text-blue-600" />
-            <h2 className="text-xl font-bold text-gray-900">Carrinho</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Carrinho</h2>
           </div>
 
-          <div className="mb-5 bg-gray-50 border border-gray-200 rounded-xl p-4">
+          <div className="mb-5 bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-700 rounded-xl p-4">
             <div className="flex items-center justify-between gap-2 mb-3">
               <div className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-blue-600" />
-                <h3 className="font-semibold text-gray-900">Cliente</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white">Cliente</h3>
               </div>
 
               <button
@@ -481,7 +481,7 @@ export function OrderCreation() {
               value={customerQuery}
               onChange={(e) => setCustomerQuery(e.target.value)}
               placeholder="Buscar por nome/telefone/endereço..."
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-3"
+              className="w-full border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2 text-sm mb-3"
             />
 
             <select
@@ -490,7 +490,7 @@ export function OrderCreation() {
                 setCustomerError(null);
                 setSelectedCustomerId(e.target.value);
               }}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2 text-sm"
             >
               <option value="">Selecione um cliente</option>
               {filteredCustomers.map((c) => (
@@ -501,7 +501,7 @@ export function OrderCreation() {
             </select>
 
             {selectedCustomer && (
-              <div className="mt-3 text-sm text-gray-700 space-y-1">
+              <div className="mt-3 text-sm text-gray-700 dark:text-slate-300 space-y-1">
                 <p>
                   <span className="font-semibold">Nome:</span> {selectedCustomer.name}
                 </p>
@@ -530,19 +530,19 @@ export function OrderCreation() {
             <>
               <div className="space-y-3 mb-6 max-h-96 overflow-y-auto">
                 {cart.map((item) => (
-                  <div key={item.product.id} className="bg-gray-50 p-3 rounded-lg">
+                  <div key={item.product.id} className="bg-gray-50 dark:bg-slate-700/50 p-3 rounded-lg">
                     <div className="flex items-start justify-between mb-2">
                       <div className="min-w-0">
-                        <h4 className="font-medium text-gray-900 text-sm">
+                        <h4 className="font-medium text-gray-900 dark:text-white text-sm">
                           {item.product.name}
                         </h4>
 
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
                           Preço padrão: {formatCurrency(item.product.price ?? 0)}
                         </p>
 
                         <div className="mt-2">
-                          <label className="block text-xs text-gray-600 mb-1">
+                          <label className="block text-xs text-gray-600 dark:text-slate-400 mb-1">
                             Preço aplicado no pedido
                           </label>
                           <input
@@ -553,7 +553,7 @@ export function OrderCreation() {
                             onChange={(e) =>
                               updateUnitPrice(item.product.id, e.target.value)
                             }
-                            className="w-28 border border-gray-300 rounded px-2 py-1 text-sm"
+                            className="w-28 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded px-2 py-1 text-sm"
                           />
                         </div>
                       </div>
@@ -570,25 +570,25 @@ export function OrderCreation() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => updateQuantity(item.product.id, -1)}
-                          className="bg-white border border-gray-300 p-1 rounded hover:bg-gray-100"
+                          className="bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 p-1 rounded hover:bg-gray-100 dark:hover:bg-slate-600"
                         >
                           <Minus className="w-3 h-3" />
                         </button>
 
-                        <span className="font-semibold text-gray-900 min-w-[2rem] text-center">
+                        <span className="font-semibold text-gray-900 dark:text-white min-w-[2rem] text-center">
                           {item.quantity}
                         </span>
 
                         <button
                           onClick={() => updateQuantity(item.product.id, 1)}
                           disabled={item.quantity >= item.product.stock_quantity}
-                          className="bg-white border border-gray-300 p-1 rounded hover:bg-gray-100 disabled:opacity-50"
+                          className="bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 p-1 rounded hover:bg-gray-100 dark:hover:bg-slate-600 disabled:opacity-50"
                         >
                           <Plus className="w-3 h-3" />
                         </button>
                       </div>
 
-                      <span className="text-sm font-semibold text-gray-900">
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white">
                         {formatCurrency(item.quantity * Number(item.unit_price ?? 0))}
                       </span>
                     </div>
@@ -596,24 +596,24 @@ export function OrderCreation() {
                 ))}
               </div>
 
-              <div className="border-t pt-4 space-y-3">
+              <div className="border-t dark:border-slate-700 pt-4 space-y-3">
                 <div>
-                  <label className="block text-sm text-gray-700 mb-1">
+                  <label className="block text-sm text-gray-700 dark:text-slate-300 mb-1">
                     Data do caixa
                   </label>
                   <input
                     type="date"
                     value={cashDate}
                     onChange={(e) => setCashDate(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    className="w-full border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2 text-sm"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
                     Se não preencher, será usada a data atual.
                   </p>
                 </div>
 
                 <div>
-                  <label className="flex items-center gap-1.5 text-sm text-gray-700 mb-1">
+                  <label className="flex items-center gap-1.5 text-sm text-gray-700 dark:text-slate-300 mb-1">
                     <FileText className="w-4 h-4" />
                     Observação
                   </label>
@@ -622,18 +622,18 @@ export function OrderCreation() {
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Ex: entregar a tal pessoa, sem troco, ligar antes..."
                     rows={3}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none"
+                    className="w-full border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2 text-sm resize-none"
                   />
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-700">Total de itens:</span>
-                  <span className="font-bold text-lg text-gray-900">{totalItems}</span>
+                  <span className="text-gray-700 dark:text-slate-300">Total de itens:</span>
+                  <span className="font-bold text-lg text-gray-900 dark:text-white">{totalItems}</span>
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-700">Total (estimado):</span>
-                  <span className="font-bold text-lg text-gray-900">
+                  <span className="text-gray-700 dark:text-slate-300">Total (estimado):</span>
+                  <span className="font-bold text-lg text-gray-900 dark:text-white">
                     {formatCurrency(totalValue)}
                   </span>
                 </div>
@@ -666,12 +666,12 @@ export function OrderCreation() {
 
       {showNewCustomer && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white w-full max-w-xl rounded-2xl shadow-xl border border-gray-200">
-            <div className="flex items-center justify-between px-6 py-4 border-b">
-              <h3 className="text-lg font-bold text-gray-900">Novo Cliente</h3>
+          <div className="bg-white dark:bg-slate-800 w-full max-w-xl rounded-2xl shadow-xl border border-gray-200 dark:border-slate-700">
+            <div className="flex items-center justify-between px-6 py-4 border-b dark:border-slate-700">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Novo Cliente</h3>
               <button
                 onClick={() => setShowNewCustomer(false)}
-                className="p-2 rounded-lg hover:bg-gray-100"
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 dark:text-slate-300"
                 title="Fechar"
               >
                 <X className="w-5 h-5" />
@@ -680,31 +680,31 @@ export function OrderCreation() {
 
             <div className="px-6 py-5 space-y-4">
               <div>
-                <label className="text-sm text-gray-700">Nome</label>
+                <label className="text-sm text-gray-700 dark:text-slate-300">Nome</label>
                 <input
                   value={newCustomerName}
                   onChange={(e) => setNewCustomerName(e.target.value)}
-                  className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"
+                  className="mt-1 w-full border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2"
                   placeholder="Ex: Leleko"
                 />
               </div>
 
               <div>
-                <label className="text-sm text-gray-700">Telefone</label>
+                <label className="text-sm text-gray-700 dark:text-slate-300">Telefone</label>
                 <input
                   value={newCustomerPhone}
                   onChange={(e) => setNewCustomerPhone(e.target.value)}
-                  className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"
+                  className="mt-1 w-full border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2"
                   placeholder="Ex: (71) 99999-9999"
                 />
               </div>
 
               <div>
-                <label className="text-sm text-gray-700">Endereço</label>
+                <label className="text-sm text-gray-700 dark:text-slate-300">Endereço</label>
                 <input
                   value={newCustomerAddress}
                   onChange={(e) => setNewCustomerAddress(e.target.value)}
-                  className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"
+                  className="mt-1 w-full border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2"
                   placeholder="Rua, número, bairro..."
                 />
               </div>
@@ -716,10 +716,10 @@ export function OrderCreation() {
               )}
             </div>
 
-            <div className="px-6 py-4 border-t flex items-center justify-end gap-3">
+            <div className="px-6 py-4 border-t dark:border-slate-700 flex items-center justify-end gap-3">
               <button
                 onClick={() => setShowNewCustomer(false)}
-                className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50"
+                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700/50"
               >
                 Cancelar
               </button>

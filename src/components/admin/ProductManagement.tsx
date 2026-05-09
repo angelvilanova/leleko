@@ -126,7 +126,7 @@ export function ProductManagement() {
   };
 
   if (loading) {
-    return <div className="text-center py-8">Carregando produtos...</div>;
+    return <div className="text-center py-8 text-slate-500 dark:text-slate-400">Carregando produtos...</div>;
   }
 
   return (
@@ -143,14 +143,14 @@ export function ProductManagement() {
       </div>
 
       {showForm && (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-          <h3 className="text-lg font-semibold mb-4">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+          <h3 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">
             {editingProduct ? 'Editar Produto' : 'Novo Produto'}
           </h3>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Nome do Produto
               </label>
               <input
@@ -158,25 +158,25 @@ export function ProductManagement() {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Descrição
               </label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Quantidade em Estoque
                 </label>
                 <input
@@ -190,12 +190,12 @@ export function ProductManagement() {
                   }
                   min="0"
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Preço de Venda
                 </label>
                 <input
@@ -210,12 +210,12 @@ export function ProductManagement() {
                     })
                   }
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Preço de Custo
                 </label>
                 <input
@@ -230,7 +230,7 @@ export function ProductManagement() {
                     })
                   }
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
                 />
               </div>
             </div>
@@ -259,12 +259,12 @@ export function ProductManagement() {
         {products.map((product) => (
           <div
             key={product.id}
-            className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow"
+            className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow"
           >
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Package className="w-5 h-5 text-blue-600" />
-                <h3 className="font-semibold text-gray-900">{product.name}</h3>
+                <h3 className="font-semibold text-slate-900 dark:text-white">{product.name}</h3>
               </div>
 
               <div className="flex items-center gap-2">
@@ -292,7 +292,7 @@ export function ProductManagement() {
 
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">Estoque:</span>
+                <span className="text-slate-600 dark:text-slate-400">Estoque:</span>
                 <span
                   className={`font-semibold ${
                     product.stock_quantity > 0 ? 'text-green-600' : 'text-red-600'
@@ -303,21 +303,21 @@ export function ProductManagement() {
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">Preço de venda:</span>
-                <span className="font-semibold text-gray-900">
+                <span className="text-slate-600 dark:text-slate-400">Preço de venda:</span>
+                <span className="font-semibold text-slate-900 dark:text-white">
                   {formatCurrency(product.price || 0)}
                 </span>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">Preço de custo:</span>
-                <span className="font-semibold text-gray-900">
+                <span className="text-slate-600 dark:text-slate-400">Preço de custo:</span>
+                <span className="font-semibold text-slate-900 dark:text-white">
                   {formatCurrency(product.cost_price || 0)}
                 </span>
               </div>
 
               <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                <span className="text-gray-600">Lucro unitário:</span>
+                <span className="text-slate-600 dark:text-slate-400">Lucro unitário:</span>
                 <span className="font-semibold text-green-600">
                   {formatCurrency((product.price || 0) - (product.cost_price || 0))}
                 </span>

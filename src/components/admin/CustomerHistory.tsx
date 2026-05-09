@@ -171,20 +171,20 @@ export function CustomerHistory() {
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Lista de clientes */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-          <div className="flex items-center gap-2 border border-gray-300 rounded-lg px-3 py-2 mb-4">
-            <Search className="w-4 h-4 text-gray-500" />
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
+          <div className="flex items-center gap-2 border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 mb-4">
+            <Search className="w-4 h-4 text-gray-500 dark:text-slate-400" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="outline-none text-sm w-full"
+              className="outline-none text-sm w-full dark:bg-transparent dark:text-white"
               placeholder="Buscar cliente..."
             />
           </div>
 
           <div className="space-y-1 max-h-[60vh] overflow-y-auto">
             {filtered.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-4">Nenhum cliente encontrado.</p>
+              <p className="text-sm text-gray-500 dark:text-slate-400 text-center py-4">Nenhum cliente encontrado.</p>
             ) : (
               filtered.map((c) => (
                 <button
@@ -192,12 +192,12 @@ export function CustomerHistory() {
                   onClick={() => selectCustomer(c)}
                   className={`w-full text-left px-3 py-3 rounded-lg transition text-sm ${
                     selectedCustomer?.id === c.id
-                      ? 'bg-blue-50 border border-blue-200'
-                      : 'hover:bg-gray-50 border border-transparent'
+                      ? 'bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800'
+                      : 'hover:bg-gray-50 dark:hover:bg-slate-700/50 border border-transparent'
                   }`}
                 >
-                  <p className="font-semibold text-gray-900">{c.name}</p>
-                  <p className="text-xs text-gray-500">{formatPhone(c.phone)}</p>
+                  <p className="font-semibold text-gray-900 dark:text-white">{c.name}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">{formatPhone(c.phone)}</p>
                 </button>
               ))
             )}
@@ -207,19 +207,19 @@ export function CustomerHistory() {
         {/* Histórico do cliente selecionado */}
         <div className="lg:col-span-2 space-y-4">
           {!selectedCustomer ? (
-            <div className="text-center py-16 bg-white rounded-xl shadow-md border border-gray-200">
-              <User className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">Selecione um cliente para ver o histórico</p>
+            <div className="text-center py-16 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
+              <User className="w-16 h-16 text-gray-300 dark:text-slate-600 mx-auto mb-4" />
+              <p className="text-gray-500 dark:text-slate-400">Selecione um cliente para ver o histórico</p>
             </div>
           ) : (
             <>
               {/* Info do cliente */}
-              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+              <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <User className="w-5 h-5 text-blue-600" />
-                  <h3 className="font-bold text-blue-900 text-lg">{selectedCustomer.name}</h3>
+                  <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  <h3 className="font-bold text-blue-900 dark:text-blue-100 text-lg">{selectedCustomer.name}</h3>
                 </div>
-                <div className="text-sm text-blue-800 space-y-0.5">
+                <div className="text-sm text-blue-800 dark:text-blue-200 space-y-0.5">
                   <p><span className="font-semibold">Telefone:</span> {formatPhone(selectedCustomer.phone)}</p>
                   <p><span className="font-semibold">Endereço:</span> {selectedCustomer.address}</p>
                 </div>
@@ -227,34 +227,34 @@ export function CustomerHistory() {
 
               {/* Resumo */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 text-center">
-                  <p className="text-xs text-gray-500 mb-1">Pedidos</p>
-                  <p className="text-2xl font-bold text-gray-900">{totals.ordersCount}</p>
+                <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 text-center">
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mb-1">Pedidos</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{totals.ordersCount}</p>
                 </div>
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 text-center">
-                  <p className="text-xs text-gray-500 mb-1">Itens comprados</p>
-                  <p className="text-2xl font-bold text-gray-900">{totals.totalItems}</p>
+                <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 text-center">
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mb-1">Itens comprados</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{totals.totalItems}</p>
                 </div>
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 text-center">
-                  <p className="text-xs text-gray-500 mb-1">Total gasto</p>
-                  <p className="text-2xl font-bold text-gray-900">{formatBRL(totals.totalRevenue)}</p>
+                <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 text-center">
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mb-1">Total gasto</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatBRL(totals.totalRevenue)}</p>
                 </div>
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 text-center">
-                  <p className="text-xs text-gray-500 mb-1">Lucro gerado</p>
+                <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 text-center">
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mb-1">Lucro gerado</p>
                   <p className="text-2xl font-bold text-green-600">{formatBRL(totals.totalProfit)}</p>
                 </div>
               </div>
 
               {/* Lista de pedidos */}
               {ordersLoading ? (
-                <div className="text-center py-8 bg-white rounded-xl shadow-md border border-gray-200">
+                <div className="text-center py-8 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
-                  <p className="text-gray-500 text-sm">Carregando pedidos...</p>
+                  <p className="text-gray-500 dark:text-slate-400 text-sm">Carregando pedidos...</p>
                 </div>
               ) : orders.length === 0 ? (
-                <div className="text-center py-8 bg-white rounded-xl shadow-md border border-gray-200">
-                  <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">Nenhum pedido encontrado para este cliente</p>
+                <div className="text-center py-8 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
+                  <Package className="w-12 h-12 text-gray-300 dark:text-slate-600 mx-auto mb-3" />
+                  <p className="text-gray-500 dark:text-slate-400">Nenhum pedido encontrado para este cliente</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -276,22 +276,22 @@ export function CustomerHistory() {
                     return (
                       <div
                         key={order.id}
-                        className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+                        className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden"
                       >
                         <button
                           onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
-                          className="w-full text-left p-4 flex items-center justify-between gap-3 hover:bg-gray-50 transition"
+                          className="w-full text-left p-4 flex items-center justify-between gap-3 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition"
                         >
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <h4 className="font-bold text-gray-900">{order.order_number}</h4>
+                              <h4 className="font-bold text-gray-900 dark:text-white">{order.order_number}</h4>
                               <span
                                 className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${st.color}`}
                               >
                                 {st.label}
                               </span>
                             </div>
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
                               {formatDateTime(order.created_at)} • {totalItems} itens •{' '}
                               {formatBRL(totalOrder)}
                             </p>
@@ -304,9 +304,9 @@ export function CustomerHistory() {
                         </button>
 
                         {isExpanded && (
-                          <div className="border-t border-gray-100 p-4 space-y-3">
+                          <div className="border-t border-gray-100 dark:border-slate-700 p-4 space-y-3">
                             {order.dispatched_at && (
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs text-gray-500 dark:text-slate-400">
                                 Despachado em: {formatDateTime(order.dispatched_at)}
                               </p>
                             )}
@@ -332,19 +332,19 @@ export function CustomerHistory() {
                                 return (
                                   <div
                                     key={item.id}
-                                    className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg"
+                                    className="flex items-center justify-between bg-gray-50 dark:bg-slate-700/50 px-3 py-2 rounded-lg"
                                   >
                                     <div className="flex items-center gap-2 min-w-0">
                                       <Package className="w-4 h-4 text-gray-400 shrink-0" />
-                                      <span className="text-sm font-medium text-gray-800 truncate">
+                                      <span className="text-sm font-medium text-gray-800 dark:text-slate-200 truncate">
                                         {item.products?.name || 'Produto'}
                                       </span>
                                     </div>
                                     <div className="text-right shrink-0 ml-2">
-                                      <span className="text-sm font-bold text-gray-900">
+                                      <span className="text-sm font-bold text-gray-900 dark:text-white">
                                         {item.quantity} un.
                                       </span>
-                                      <span className="text-xs text-gray-500 ml-2">
+                                      <span className="text-xs text-gray-500 dark:text-slate-400 ml-2">
                                         {formatBRL(subtotal)}
                                       </span>
                                     </div>
@@ -353,11 +353,11 @@ export function CustomerHistory() {
                               })}
                             </div>
 
-                            <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                              <span className="text-sm text-gray-600 font-medium">
+                            <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-slate-700">
+                              <span className="text-sm text-gray-600 dark:text-slate-400 font-medium">
                                 Total do pedido:
                               </span>
-                              <span className="text-lg font-bold text-gray-900">
+                              <span className="text-lg font-bold text-gray-900 dark:text-white">
                                 {formatBRL(totalOrder)}
                               </span>
                             </div>

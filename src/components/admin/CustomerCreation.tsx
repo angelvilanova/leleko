@@ -169,16 +169,16 @@ export function CustomerCreation() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
         <div className="flex items-center justify-between gap-3 mb-4">
-          <h3 className="font-semibold text-gray-900">
+          <h3 className="font-semibold text-gray-900 dark:text-white">
             {editingCustomer ? 'Editar cliente' : 'Novo cliente'}
           </h3>
 
           {editingCustomer && (
             <button
               onClick={resetForm}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm"
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 text-sm"
             >
               <X className="w-4 h-4" />
               Cancelar edição
@@ -188,31 +188,31 @@ export function CustomerCreation() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="text-sm text-gray-700">Nome</label>
+            <label className="text-sm text-gray-700 dark:text-slate-300">Nome</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="mt-1 w-full border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2"
               placeholder="Ex: Leleko"
             />
           </div>
 
           <div>
-            <label className="text-sm text-gray-700">Telefone</label>
+            <label className="text-sm text-gray-700 dark:text-slate-300">Telefone</label>
             <input
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="mt-1 w-full border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2"
               placeholder="Ex: (71) 99999-9999"
             />
           </div>
 
           <div>
-            <label className="text-sm text-gray-700">Endereço</label>
+            <label className="text-sm text-gray-700 dark:text-slate-300">Endereço</label>
             <input
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="mt-1 w-full border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2"
               placeholder="Rua, número, bairro..."
             />
           </div>
@@ -244,34 +244,34 @@ export function CustomerCreation() {
         )}
       </div>
 
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
         <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-          <h3 className="font-semibold text-gray-900">Clientes cadastrados</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-white">Clientes cadastrados</h3>
 
-          <div className="flex items-center gap-2 border border-gray-300 rounded-lg px-3 py-2">
-            <Search className="w-4 h-4 text-gray-500" />
+          <div className="flex items-center gap-2 border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2">
+            <Search className="w-4 h-4 text-gray-500 dark:text-slate-400" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="outline-none text-sm w-64 max-w-full"
+              className="outline-none text-sm w-64 max-w-full dark:bg-transparent dark:text-white"
               placeholder="Buscar por nome/telefone/endereço..."
             />
           </div>
         </div>
 
         {filtered.length === 0 ? (
-          <p className="text-gray-600">Nenhum cliente encontrado.</p>
+          <p className="text-gray-600 dark:text-slate-400">Nenhum cliente encontrado.</p>
         ) : (
           <div className="space-y-3">
             {filtered.map((c) => (
               <div
                 key={c.id}
-                className="bg-gray-50 p-4 rounded-lg flex items-start justify-between gap-4"
+                className="bg-gray-50 dark:bg-slate-700/50 p-4 rounded-lg flex items-start justify-between gap-4"
               >
                 <div>
-                  <p className="font-semibold text-gray-900">{c.name}</p>
-                  <p className="text-sm text-gray-700">Telefone: {c.phone}</p>
-                  <p className="text-sm text-gray-700">Endereço: {c.address}</p>
+                  <p className="font-semibold text-gray-900 dark:text-white">{c.name}</p>
+                  <p className="text-sm text-gray-700 dark:text-slate-300">Telefone: {c.phone}</p>
+                  <p className="text-sm text-gray-700 dark:text-slate-300">Endereço: {c.address}</p>
                 </div>
 
                 <div className="flex items-center gap-3">

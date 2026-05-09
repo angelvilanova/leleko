@@ -145,13 +145,13 @@ export function CashierDashboard() {
   const monthStats = useMemo(() => buildStats(rowsMonth), [rowsMonth]);
 
   if (loading) {
-    return <div className="text-center py-10 text-gray-600">Carregando caixa...</div>;
+    return <div className="text-center py-10 text-gray-600 dark:text-slate-400">Carregando caixa...</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
           Dia selecionado: {selectedDay.toLocaleDateString('pt-BR')} • Mês:{' '}
           {fromYMD(monthStartYmd).toLocaleDateString('pt-BR')}
         </p>
@@ -161,19 +161,19 @@ export function CashierDashboard() {
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="px-3 py-2 rounded-lg border border-gray-300 text-sm"
+            className="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white text-sm"
           />
 
           <button
             onClick={() => setSelectedDate(toYMD(new Date()))}
-            className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm"
+            className="px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 text-sm"
           >
             Hoje
           </button>
 
           <button
             onClick={load}
-            className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 flex items-center gap-2"
+            className="px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 flex items-center gap-2"
           >
             <RefreshCcw className="w-4 h-4" />
             Atualizar
@@ -182,93 +182,93 @@ export function CashierDashboard() {
       </div>
 
       {errorMsg && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
           {errorMsg}
         </div>
       )}
 
       {/* Cards do dia */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-2 text-slate-500 mb-2">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-2">
             <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
               <CalendarDays className="w-4 h-4 text-blue-600" />
             </div>
             <span className="font-semibold text-sm">Faturamento do dia</span>
           </div>
-          <div className="text-3xl font-bold text-slate-900">{formatBRL(dayStats.totalRevenue)}</div>
-          <div className="text-sm text-slate-500 mt-2">
-            Pedidos: <span className="font-semibold text-slate-700">{dayStats.ordersCount}</span> •
-            Itens: <span className="font-semibold text-slate-700">{dayStats.totalItems}</span>
+          <div className="text-3xl font-bold text-slate-900 dark:text-white">{formatBRL(dayStats.totalRevenue)}</div>
+          <div className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+            Pedidos: <span className="font-semibold text-slate-700 dark:text-slate-300">{dayStats.ordersCount}</span> •
+            Itens: <span className="font-semibold text-slate-700 dark:text-slate-300">{dayStats.totalItems}</span>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-2 text-slate-500 mb-2">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-2">
             <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
               <DollarSign className="w-4 h-4 text-orange-600" />
             </div>
             <span className="font-semibold text-sm">Custo do dia</span>
           </div>
           <div className="text-3xl font-bold text-orange-600">{formatBRL(dayStats.totalCost)}</div>
-          <div className="text-sm text-slate-500 mt-2">
-            Ticket bruto: <span className="font-semibold text-slate-700">{formatBRL(dayStats.totalRevenue)}</span>
+          <div className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+            Ticket bruto: <span className="font-semibold text-slate-700 dark:text-slate-300">{formatBRL(dayStats.totalRevenue)}</span>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-2 text-slate-500 mb-2">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-2">
             <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
               <TrendingUp className="w-4 h-4 text-emerald-600" />
             </div>
             <span className="font-semibold text-sm">Lucro líquido do dia</span>
           </div>
           <div className="text-3xl font-bold text-emerald-600">{formatBRL(dayStats.totalProfit)}</div>
-          <div className="text-sm text-slate-500 mt-2">
-            Margem: <span className="font-semibold text-slate-700">{dayStats.margin}%</span>
+          <div className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+            Margem: <span className="font-semibold text-slate-700 dark:text-slate-300">{dayStats.margin}%</span>
           </div>
         </div>
       </div>
 
       {/* Cards do mês */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-2 text-slate-500 mb-2">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-2">
             <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
               <CalendarDays className="w-4 h-4 text-blue-600" />
             </div>
             <span className="font-semibold text-sm">Faturamento no mês</span>
           </div>
-          <div className="text-3xl font-bold text-slate-900">{formatBRL(monthStats.totalRevenue)}</div>
-          <div className="text-sm text-slate-500 mt-2">
-            Pedidos: <span className="font-semibold text-slate-700">{monthStats.ordersCount}</span> •
-            Itens: <span className="font-semibold text-slate-700">{monthStats.totalItems}</span>
+          <div className="text-3xl font-bold text-slate-900 dark:text-white">{formatBRL(monthStats.totalRevenue)}</div>
+          <div className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+            Pedidos: <span className="font-semibold text-slate-700 dark:text-slate-300">{monthStats.ordersCount}</span> •
+            Itens: <span className="font-semibold text-slate-700 dark:text-slate-300">{monthStats.totalItems}</span>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-2 text-slate-500 mb-2">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-2">
             <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
               <DollarSign className="w-4 h-4 text-orange-600" />
             </div>
             <span className="font-semibold text-sm">Custo no mês</span>
           </div>
           <div className="text-3xl font-bold text-orange-600">{formatBRL(monthStats.totalCost)}</div>
-          <div className="text-sm text-slate-500 mt-2">
-            Ticket bruto: <span className="font-semibold text-slate-700">{formatBRL(monthStats.totalRevenue)}</span>
+          <div className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+            Ticket bruto: <span className="font-semibold text-slate-700 dark:text-slate-300">{formatBRL(monthStats.totalRevenue)}</span>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-2 text-slate-500 mb-2">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-2">
             <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
               <TrendingUp className="w-4 h-4 text-emerald-600" />
             </div>
             <span className="font-semibold text-sm">Lucro líquido no mês</span>
           </div>
           <div className="text-3xl font-bold text-emerald-600">{formatBRL(monthStats.totalProfit)}</div>
-          <div className="text-sm text-slate-500 mt-2">
-            Margem: <span className="font-semibold text-slate-700">{monthStats.margin}%</span>
+          <div className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+            Margem: <span className="font-semibold text-slate-700 dark:text-slate-300">{monthStats.margin}%</span>
           </div>
         </div>
       </div>
@@ -386,37 +386,37 @@ function RankingCard({
   }>;
 }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-md p-5">
-      <div className="flex items-center gap-2 mb-3 text-gray-700">
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm p-5">
+      <div className="flex items-center gap-2 mb-3 text-gray-700 dark:text-slate-300">
         <Package className="w-5 h-5" />
         <h3 className="font-semibold">{title}</h3>
       </div>
 
       {items.length === 0 ? (
-        <p className="text-gray-600">Sem vendas no período.</p>
+        <p className="text-gray-600 dark:text-slate-400">Sem vendas no período.</p>
       ) : (
         <div className="space-y-2">
           {items.slice(0, 10).map((p) => (
             <div
               key={p.name}
-              className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-1"
+              className="bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-700 rounded-lg p-3 space-y-1"
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="font-semibold text-gray-900 truncate">{p.name}</div>
-                  <div className="text-xs text-gray-600">Quantidade: {p.qty}</div>
+                  <div className="font-semibold text-gray-900 dark:text-white truncate">{p.name}</div>
+                  <div className="text-xs text-gray-600 dark:text-slate-400">Quantidade: {p.qty}</div>
                 </div>
 
                 <div className="text-right">
-                  <div className="font-bold text-gray-900">{formatBRL(p.revenue)}</div>
+                  <div className="font-bold text-gray-900 dark:text-white">{formatBRL(p.revenue)}</div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-gray-200">
-                <div className="text-gray-600">
+              <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-gray-200 dark:border-slate-600">
+                <div className="text-gray-600 dark:text-slate-400">
                   Custo: <span className="font-semibold">{formatBRL(p.cost)}</span>
                 </div>
-                <div className="text-right text-green-700">
+                <div className="text-right text-green-700 dark:text-green-400">
                   Lucro: <span className="font-semibold">{formatBRL(p.profit)}</span>
                 </div>
               </div>

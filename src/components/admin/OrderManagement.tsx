@@ -546,19 +546,19 @@ export function OrderManagement() {
   }
 
   if (loading) {
-    return <div className="text-center py-8 text-gray-600">Carregando pedidos...</div>;
+    return <div className="text-center py-8 text-gray-600 dark:text-slate-400">Carregando pedidos...</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h2 className="text-2xl font-bold text-gray-900">Gerenciar Pedidos</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Gerenciar Pedidos</h2>
 
         <div className="flex items-center gap-3 flex-wrap">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-80 max-w-full"
+            className="border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2 text-sm w-80 max-w-full"
             placeholder="Buscar por pedido, status, cliente..."
           />
 
@@ -567,7 +567,7 @@ export function OrderManagement() {
               applyQuickRange('today');
               setTimeout(loadOrders, 0);
             }}
-            className="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm"
+            className="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 text-sm"
           >
             Hoje
           </button>
@@ -577,7 +577,7 @@ export function OrderManagement() {
               applyQuickRange('yesterday');
               setTimeout(loadOrders, 0);
             }}
-            className="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm"
+            className="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 text-sm"
           >
             Ontem
           </button>
@@ -587,34 +587,34 @@ export function OrderManagement() {
               applyQuickRange('month');
               setTimeout(loadOrders, 0);
             }}
-            className="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm"
+            className="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 text-sm"
           >
             Este mês
           </button>
 
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600">Despacho De</label>
+            <label className="text-sm text-gray-600 dark:text-slate-400">Despacho De</label>
             <input
               type="date"
               value={dispatchFrom}
               onChange={(e) => setDispatchFrom(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2 text-sm"
             />
           </div>
 
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600">Até</label>
+            <label className="text-sm text-gray-600 dark:text-slate-400">Até</label>
             <input
               type="date"
               value={dispatchTo}
               onChange={(e) => setDispatchTo(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2 text-sm"
             />
           </div>
 
           <button
             onClick={loadOrders}
-            className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm"
+            className="px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 text-sm"
           >
             Filtrar
           </button>
@@ -624,14 +624,14 @@ export function OrderManagement() {
               clearFilters();
               setTimeout(loadOrders, 0);
             }}
-            className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm"
+            className="px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 text-sm"
           >
             Limpar
           </button>
 
           <button
             onClick={() => setSortAsc((prev) => !prev)}
-            className="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm flex items-center gap-1"
+            className="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 text-sm flex items-center gap-1"
             title={sortAsc ? 'Mais antigos primeiro' : 'Mais recentes primeiro'}
           >
             <ArrowUpDown size={16} />
@@ -641,7 +641,7 @@ export function OrderManagement() {
       </div>
 
       {filteredOrders.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8 text-center text-gray-600">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm p-8 text-center text-gray-600 dark:text-slate-400">
           Nenhum pedido encontrado.
         </div>
       ) : (
@@ -657,7 +657,7 @@ export function OrderManagement() {
             );
 
             return (
-              <div key={order.id} className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden">
+              <div key={order.id} className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
                 <div className="p-5 flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
                     <button
@@ -667,12 +667,12 @@ export function OrderManagement() {
                     >
                       <div className="flex items-center gap-3 flex-wrap">
                         <div>
-                          <div className="text-lg font-bold text-gray-900">{order.order_number}</div>
-                          <div className="text-sm text-gray-600">
+                          <div className="text-lg font-bold text-gray-900 dark:text-white">{order.order_number}</div>
+                          <div className="text-sm text-gray-600 dark:text-slate-400">
                             Criado em: {new Date(order.created_at).toLocaleString('pt-BR')}
                           </div>
                           {order.dispatched_at && (
-                            <div className="text-sm text-gray-600">
+                            <div className="text-sm text-gray-600 dark:text-slate-400">
                               Despachado em: {new Date(order.dispatched_at).toLocaleString('pt-BR')}
                             </div>
                           )}
@@ -688,18 +688,18 @@ export function OrderManagement() {
                       </div>
                     </button>
 
-                    <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
-                      <div className="flex items-center gap-2 mb-1 text-blue-900 font-semibold">
+                    <div className="mt-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-sm">
+                      <div className="flex items-center gap-2 mb-1 text-blue-900 dark:text-blue-100 font-semibold">
                         <User className="w-4 h-4" /> Cliente
                       </div>
                       {order.customers ? (
-                        <div className="text-blue-900 space-y-1">
+                        <div className="text-blue-900 dark:text-blue-200 space-y-1">
                           <div><span className="font-semibold">Nome:</span> {order.customers.name}</div>
                           <div><span className="font-semibold">Telefone:</span> {order.customers.phone}</div>
                           <div><span className="font-semibold">Endereço:</span> {order.customers.address}</div>
                         </div>
                       ) : (
-                        <div className="text-blue-900">Sem cliente associado</div>
+                        <div className="text-blue-900 dark:text-blue-200">Sem cliente associado</div>
                       )}
                     </div>
 
@@ -718,7 +718,7 @@ export function OrderManagement() {
                       <>
                         <button
                           onClick={() => startEdit(order)}
-                          className="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 flex items-center gap-2"
+                          className="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 flex items-center gap-2"
                           title="Editar pedido"
                         >
                           <Edit3 className="w-4 h-4" />
@@ -748,7 +748,7 @@ export function OrderManagement() {
                         <button
                           onClick={cancelEdit}
                           disabled={saving}
-                          className="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50"
+                          className="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 flex items-center gap-2 disabled:opacity-50"
                           title="Cancelar"
                         >
                           <X className="w-4 h-4" />
@@ -761,22 +761,22 @@ export function OrderManagement() {
 
                 {expanded && (
                   <div className="px-5 pb-5">
-                    <div className="border-t pt-4 space-y-4">
+                    <div className="border-t dark:border-slate-700 pt-4 space-y-4">
                       <div className="flex items-center justify-between gap-3 flex-wrap">
-                        <div className="font-semibold text-gray-900">Status do pedido</div>
+                        <div className="font-semibold text-gray-900 dark:text-white">Status do pedido</div>
 
                         {editing ? (
                           <select
                             value={draftStatus}
                             onChange={(e) => setDraftStatus(e.target.value as OrderRow['status'])}
-                            className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                            className="border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2 text-sm"
                           >
                             <option value="pending">Pendente</option>
                             <option value="dispatched">Despachado</option>
                             <option value="cancelled">Cancelado</option>
                           </select>
                         ) : (
-                          <div className="text-sm text-gray-700">
+                          <div className="text-sm text-gray-700 dark:text-slate-300">
                             <span className="font-semibold">{statusLabel[order.status]}</span>
                           </div>
                         )}
@@ -803,7 +803,7 @@ export function OrderManagement() {
                       )}
 
                       <div className="flex items-center justify-between gap-3 flex-wrap">
-                        <div className="font-semibold text-gray-900">Itens do pedido</div>
+                        <div className="font-semibold text-gray-900 dark:text-white">Itens do pedido</div>
                         {editing && (
                           <button
                             onClick={addDraftItem}
@@ -832,7 +832,7 @@ export function OrderManagement() {
                             : 0;
 
                           return (
-                            <div key={isDraft ? draft.id : real.id} className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                            <div key={isDraft ? draft.id : real.id} className="bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-700 rounded-xl p-4">
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0 flex items-center gap-3">
                                   <Package className="w-5 h-5 text-gray-500" />
@@ -858,11 +858,11 @@ export function OrderManagement() {
                                       </select>
                                     ) : (
                                       <>
-                                        <div className="font-semibold text-gray-900 truncate">
+                                        <div className="font-semibold text-gray-900 dark:text-white truncate">
                                           {prod?.name}
                                         </div>
                                         {prod?.description && (
-                                          <div className="text-sm text-gray-600 truncate">
+                                          <div className="text-sm text-gray-600 dark:text-slate-400 truncate">
                                             {prod.description}
                                           </div>
                                         )}
@@ -883,7 +883,7 @@ export function OrderManagement() {
                               </div>
 
                               <div className="mt-3 flex items-center justify-between">
-                                <div className="text-sm text-gray-700">
+                                <div className="text-sm text-gray-700 dark:text-slate-300">
                                   Estoque atual: <span className="font-semibold">{prod?.stock_quantity ?? '-'}</span>
                                 </div>
 
@@ -896,7 +896,7 @@ export function OrderManagement() {
                                             quantity: Math.max(1, qty - 1),
                                           })
                                         }
-                                        className="bg-white border border-gray-300 p-2 rounded-lg hover:bg-gray-100"
+                                        className="bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-600"
                                         title="-"
                                       >
                                         <Minus className="w-4 h-4" />
@@ -911,11 +911,11 @@ export function OrderManagement() {
                                             quantity: Number.isFinite(v) ? Math.max(1, v) : 1,
                                           });
                                         }}
-                                        className="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm text-center"
+                                        className="w-20 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2 text-sm text-center"
                                       />
                                       <button
                                         onClick={() => updateDraftItem(draft.id, { quantity: qty + 1 })}
-                                        className="bg-white border border-gray-300 p-2 rounded-lg hover:bg-gray-100"
+                                        className="bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-600"
                                         title="+"
                                       >
                                         <Plus className="w-4 h-4" />
@@ -923,8 +923,8 @@ export function OrderManagement() {
                                     </>
                                   ) : (
                                     <div className="text-right">
-                                      <div className="font-bold text-gray-900">{qty} un.</div>
-                                      <div className="text-sm text-green-700 font-semibold">
+                                      <div className="font-bold text-gray-900 dark:text-white">{qty} un.</div>
+                                      <div className="text-sm text-green-700 dark:text-green-400 font-semibold">
                                         {formatBRL(itemSubtotal)}
                                       </div>
                                     </div>
@@ -937,7 +937,7 @@ export function OrderManagement() {
                       </div>
 
                       <div className="pt-2 space-y-2">
-                        <div className="text-sm text-gray-700 flex items-center justify-between">
+                        <div className="text-sm text-gray-700 dark:text-slate-300 flex items-center justify-between">
                           <span className="font-semibold">Total de itens:</span>
                           <span className="font-bold">
                             {(editing ? draftItems : order.order_items).reduce(
@@ -948,9 +948,9 @@ export function OrderManagement() {
                         </div>
 
                         {!editing && (
-                          <div className="text-sm text-gray-700 flex items-center justify-between">
+                          <div className="text-sm text-gray-700 dark:text-slate-300 flex items-center justify-between">
                             <span className="font-semibold">Total do pedido:</span>
-                            <span className="font-bold text-green-700">
+                            <span className="font-bold text-green-700 dark:text-green-400">
                               {formatBRL(orderTotal)}
                             </span>
                           </div>
@@ -958,7 +958,7 @@ export function OrderManagement() {
                       </div>
 
                       {editing && (
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-gray-500 dark:text-slate-400">
                           * Ao salvar, o sistema devolve o estoque antigo e aplica o novo para manter tudo correto.
                         </div>
                       )}
