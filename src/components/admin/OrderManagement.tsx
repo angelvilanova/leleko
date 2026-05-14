@@ -946,7 +946,7 @@ export function OrderManagement() {
 
             return (
               <div key={order.id} className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
-                <div className="p-5 flex items-start justify-between gap-4">
+                <div className="p-5 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
                   <div className="min-w-0 flex-1">
                     <button
                       onClick={() => setExpandedId(expanded ? null : order.id)}
@@ -1001,7 +1001,7 @@ export function OrderManagement() {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2 flex-wrap justify-end">
+                  <div className="flex flex-wrap items-center gap-2 sm:justify-end w-full sm:w-auto">
                     {!editing ? (
                       <>
                         <button
