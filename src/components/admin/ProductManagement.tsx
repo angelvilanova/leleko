@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Product } from '../../types/database';
-import { Plus, CreditCard as Edit2, Package, Trash2 } from 'lucide-react';
+import { Plus, CreditCard as Edit2, Package, Trash2, X } from 'lucide-react';
 
 export function ProductManagement() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -143,115 +143,132 @@ export function ProductManagement() {
       </div>
 
       {showForm && (
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
-          <h3 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">
-            {editingProduct ? 'Editar Produto' : 'Novo Produto'}
-          </h3>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Nome do Produto
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Descrição
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={3}
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Quantidade em Estoque
-                </label>
-                <input
-                  type="number"
-                  value={formData.stock_quantity}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      stock_quantity: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  min="0"
-                  required
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Preço de Venda
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.price}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      price: Number(e.target.value) || 0,
-                    })
-                  }
-                  required
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Preço de Custo
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.cost_price}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      cost_price: Number(e.target.value) || 0,
-                    })
-                  }
-                  required
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-2">
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"
+          onClick={resetForm}
+        >
+          <div
+            className="bg-white dark:bg-slate-800 w-full max-w-2xl rounded-2xl shadow-xl border border-gray-200 dark:border-slate-700 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b dark:border-slate-700">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                {editingProduct ? 'Editar Produto' : 'Novo Produto'}
+              </h3>
               <button
-                type="submit"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-              >
-                {editingProduct ? 'Atualizar' : 'Criar'}
-              </button>
-
-              <button
-                type="button"
                 onClick={resetForm}
-                className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition"
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 dark:text-slate-300"
+                title="Fechar"
               >
-                Cancelar
+                <X className="w-5 h-5" />
               </button>
             </div>
-          </form>
+
+            <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Nome do Produto
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Descrição
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Quantidade em Estoque
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.stock_quantity}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        stock_quantity: parseInt(e.target.value) || 0,
+                      })
+                    }
+                    min="0"
+                    required
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Preço de Venda
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.price}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        price: Number(e.target.value) || 0,
+                      })
+                    }
+                    required
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Preço de Custo
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.cost_price}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        cost_price: Number(e.target.value) || 0,
+                      })
+                    }
+                    required
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="submit"
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                >
+                  {editingProduct ? 'Atualizar' : 'Criar'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
