@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Product } from '../../types/database';
-import { Plus, CreditCard as Edit2, Package, Trash2, X } from 'lucide-react';
+import { Plus, CreditCard as Edit2, Package, Trash2, X, Search } from 'lucide-react';
 
 export function ProductManagement() {
   const [products, setProducts] = useState<Product[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -129,13 +130,40 @@ export function ProductManagement() {
     return <div className="text-center py-8 text-slate-500 dark:text-slate-400">Carregando produtos...</div>;
   }
 
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredProducts = normalizedQuery
+    ? products.filter(
+        (product) =>
+          product.name.toLowerCase().includes(normalizedQuery) ||
+          (product.description || '').toLowerCase().includes(normalizedQuery)
+      )
+    : products;
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div />
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+        <div className="relative w-full sm:max-w-md">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar produto por nome ou descrição..."
+            className="w-full pl-9 pr-9 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              title="Limpar busca"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
         <button
           onClick={handleNewProduct}
-          className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 transition shadow-sm shadow-blue-600/20 font-medium text-sm"
+          className="flex items-center justify-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 transition shadow-sm shadow-blue-600/20 font-medium text-sm"
         >
           <Plus className="w-5 h-5" />
           Novo Produto
@@ -273,7 +301,7 @@ export function ProductManagement() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {products.map((product) => (
+        {filteredProducts.map((product) => (
           <div
             key={product.id}
             className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow"
@@ -348,6 +376,15 @@ export function ProductManagement() {
         <div className="text-center py-12 bg-gray-50 rounded-xl">
           <Package className="w-12 h-12 text-gray-400 mx-auto mb-3" />
           <p className="text-gray-600">Nenhum produto cadastrado ainda</p>
+        </div>
+      )}
+
+      {products.length > 0 && filteredProducts.length === 0 && (
+        <div className="text-center py-12 bg-gray-50 dark:bg-slate-800/50 rounded-xl">
+          <Search className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+          <p className="text-gray-600 dark:text-slate-400">
+            Nenhum produto encontrado para "{searchQuery}"
+          </p>
         </div>
       )}
     </div>
