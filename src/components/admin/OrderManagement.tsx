@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Check, Edit3, Trash2, X, Plus, Minus, Package, User, CalendarDays, ArrowUpDown, FileText } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { Check, Edit3, Trash2, X, Plus, Minus, Package, User, CalendarDays, ArrowUpDown, FileText, Printer, Truck, Users } from 'lucide-react';
 
 type Product = {
   id: string;
@@ -95,6 +96,18 @@ function formatBRL(value: number) {
   });
 }
 
+function formatPhoneDisplay(phone?: string | null): string {
+  if (!phone) return 'Não informado';
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length === 11) return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  if (digits.length === 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return phone;
+}
+
+function normalizePhone(value: string) {
+  return value.replace(/\D/g, '');
+}
+
 function formatCashDate(value?: string | null) {
   if (!value) return 'Não informada';
 
@@ -105,8 +118,11 @@ function formatCashDate(value?: string | null) {
 }
 
 export function OrderManagement() {
+  const { profile } = useAuth();
+
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -115,7 +131,15 @@ export function OrderManagement() {
   const [draftStatus, setDraftStatus] = useState<OrderRow['status']>('pending');
   const [draftCashDate, setDraftCashDate] = useState<string>('');
   const [draftItems, setDraftItems] = useState<DraftItem[]>([]);
+  const [draftCustomerId, setDraftCustomerId] = useState<string>('');
+  const [customerQuery, setCustomerQuery] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const [showNewCustomer, setShowNewCustomer] = useState(false);
+  const [newCustomerName, setNewCustomerName] = useState('');
+  const [newCustomerPhone, setNewCustomerPhone] = useState('');
+  const [newCustomerAddress, setNewCustomerAddress] = useState('');
+  const [customerError, setCustomerError] = useState<string | null>(null);
 
   const [query, setQuery] = useState('');
   const [sortAsc, setSortAsc] = useState(false);
@@ -124,10 +148,29 @@ export function OrderManagement() {
 
   useEffect(() => {
     (async () => {
-      await Promise.all([loadOrders(), loadProducts()]);
+      await Promise.all([loadOrders(), loadProducts(), loadCustomers()]);
       setLoading(false);
     })();
   }, []);
+
+  const filteredCustomers = useMemo(() => {
+    const q = customerQuery.trim().toLowerCase();
+    if (!q) return customers;
+
+    const qPhone = normalizePhone(q);
+
+    return customers.filter((c) => {
+      const name = c.name?.toLowerCase() || '';
+      const address = c.address?.toLowerCase() || '';
+      const phone = normalizePhone(c.phone || '');
+
+      return (
+        name.includes(q) ||
+        address.includes(q) ||
+        (qPhone && phone.includes(qPhone))
+      );
+    });
+  }, [customers, customerQuery]);
 
   const filteredOrders = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -171,6 +214,71 @@ export function OrderManagement() {
     }
 
     setProducts((data || []) as Product[]);
+  }
+
+  async function loadCustomers() {
+    const { data, error } = await supabase
+      .from('customers')
+      .select('id,name,phone,address')
+      .order('name');
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    setCustomers((data || []) as Customer[]);
+  }
+
+  async function createCustomer() {
+    setCustomerError(null);
+
+    const name = newCustomerName.trim();
+    const phone = normalizePhone(newCustomerPhone);
+    const address = newCustomerAddress.trim();
+
+    if (!name || !phone || !address) {
+      setCustomerError('Preencha Nome, Telefone e Endereço.');
+      return;
+    }
+
+    try {
+      const { data: existing, error: existingErr } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('phone', phone)
+        .maybeSingle();
+
+      if (existingErr) throw existingErr;
+
+      if (existing?.id) {
+        setDraftCustomerId(existing.id);
+        setShowNewCustomer(false);
+        setCustomerError('Já existe um cliente com esse telefone. Selecionei ele pra você.');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('customers')
+        .insert([{ name, phone, address }])
+        .select('id,name,phone,address')
+        .single();
+
+      if (error) throw error;
+
+      const created = data as Customer;
+
+      setCustomers((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+      setDraftCustomerId(created.id);
+      setShowNewCustomer(false);
+      setNewCustomerName('');
+      setNewCustomerPhone('');
+      setNewCustomerAddress('');
+      setCustomerError(null);
+    } catch (error) {
+      console.error('Error creating customer:', error);
+      setCustomerError('Erro ao cadastrar cliente. Verifique as policies (RLS) no Supabase.');
+    }
   }
 
   async function loadOrders() {
@@ -246,6 +354,9 @@ export function OrderManagement() {
     setEditingId(order.id);
     setDraftStatus(order.status);
     setDraftCashDate(order.cash_date || toYMD(new Date()));
+    setDraftCustomerId(order.customer_id || '');
+    setCustomerQuery('');
+    setCustomerError(null);
     setDraftItems(
       order.order_items.map((it) => ({
         id: it.id,
@@ -262,6 +373,9 @@ export function OrderManagement() {
     setEditingId(null);
     setDraftItems([]);
     setDraftCashDate('');
+    setDraftCustomerId('');
+    setCustomerQuery('');
+    setCustomerError(null);
   }
 
   function updateDraftItem(itemId: string, patch: Partial<DraftItem>) {
@@ -322,7 +436,8 @@ export function OrderManagement() {
         status: OrderRow['status'];
         dispatched_at?: string | null;
         cash_date?: string | null;
-      } = { status: draftStatus };
+        customer_id?: string | null;
+      } = { status: draftStatus, customer_id: draftCustomerId || null };
 
       if (draftStatus === 'dispatched') {
         // Só atualiza dispatched_at quando o pedido está sendo despachado pela primeira vez.
@@ -500,6 +615,9 @@ export function OrderManagement() {
       setEditingId(null);
       setDraftItems([]);
       setDraftCashDate('');
+      setDraftCustomerId('');
+      setCustomerQuery('');
+      setCustomerError(null);
       await Promise.all([loadOrders(), loadProducts()]);
     } catch (e: any) {
       console.error(e);
@@ -508,6 +626,9 @@ export function OrderManagement() {
       setEditingId(null);
       setDraftItems([]);
       setDraftCashDate('');
+      setDraftCustomerId('');
+      setCustomerQuery('');
+      setCustomerError(null);
     } finally {
       setSaving(false);
     }
@@ -543,6 +664,173 @@ export function OrderManagement() {
       console.error(e);
       alert('Erro ao apagar o pedido. Veja o console.');
     }
+  }
+
+  async function handleQuickDispatch(order: OrderRow) {
+    if (!profile) return;
+
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({
+          status: 'dispatched',
+          dispatched_by: profile.id,
+          dispatched_at: new Date().toISOString(),
+          cash_date: toYMD(new Date()),
+        })
+        .eq('id', order.id);
+
+      if (error) throw error;
+      await loadOrders();
+    } catch (e) {
+      console.error(e);
+      alert('Não foi possível despachar o pedido.');
+    }
+  }
+
+  function buildPrintHtml(order: OrderRow) {
+    const items = order.order_items || [];
+    const totalItems = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+    const orderTotal = items.reduce(
+      (sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0),
+      0
+    );
+
+    const itemsHtml = items
+      .map((item) => {
+        const qty = Number(item.quantity || 0);
+        const unitPrice = Number(item.unit_price || 0);
+        const subtotal = qty * unitPrice;
+
+        return `
+          <tr>
+            <td class="qty">${qty}x</td>
+            <td class="desc">
+              <div class="item-name">${item.products?.name || 'Produto'}</div>
+              ${item.products?.description ? `<div class="item-note">${item.products.description}</div>` : ''}
+              <div class="item-price">
+                Unit.: ${formatBRL(unitPrice)}
+                &middot; Subtotal: <strong>${formatBRL(subtotal)}</strong>
+              </div>
+            </td>
+          </tr>
+        `;
+      })
+      .join('');
+
+    const phoneFormatted = formatPhoneDisplay(order.customers?.phone);
+
+    return `
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+        <head>
+          <meta charset="UTF-8" />
+          <title>Pedido ${order.order_number || order.id}</title>
+          <style>
+            * { box-sizing: border-box; }
+            body { margin: 0; padding: 0; background: #ffffff; color: #000000; font-family: Arial, Helvetica, sans-serif; }
+            .ticket { width: 80mm; max-width: 100%; margin: 0 auto; padding: 10px; font-size: 12px; line-height: 1.4; }
+            .customer-header { border: 2px solid #000; padding: 8px; margin-bottom: 8px; }
+            .customer-header-title { text-align: center; font-size: 13px; font-weight: 700; text-transform: uppercase; margin-bottom: 6px; }
+            .customer-line { margin-bottom: 4px; word-break: break-word; font-size: 12px; }
+            .customer-line.phone { font-size: 16px; font-weight: 700; }
+            .customer-name { font-size: 18px; font-weight: 900; margin-bottom: 6px; text-transform: uppercase; text-align: center; line-height: 1.2; word-break: break-word; }
+            .cut-line { border-top: 2px dashed #000; margin: 10px 0; position: relative; text-align: center; }
+            .cut-line span { position: relative; top: -9px; background: #fff; padding: 0 8px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+            .center { text-align: center; }
+            .title { font-size: 18px; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
+            .order-number { font-size: 20px; font-weight: 700; text-align: center; margin-bottom: 6px; }
+            .divider { border-top: 1px dashed #000; margin: 8px 0; }
+            .section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
+            .line { margin-bottom: 3px; word-break: break-word; }
+            .line.phone { font-size: 16px; font-weight: 700; }
+            table { width: 100%; border-collapse: collapse; }
+            td { vertical-align: top; padding: 4px 0; }
+            .qty { width: 32px; font-weight: 700; }
+            .desc { padding-right: 8px; }
+            .item-name { font-weight: 700; }
+            .item-note { font-size: 11px; margin-top: 2px; }
+            .item-price { font-size: 11px; margin-top: 2px; }
+            .footer { text-align: center; font-size: 11px; margin-top: 12px; }
+            .highlight { font-size: 14px; font-weight: 700; }
+            .total-line { font-size: 16px; font-weight: 900; margin-top: 4px; display: flex; justify-content: space-between; }
+            .obs-box { border: 2px solid #000; padding: 6px 8px; margin: 8px 0; }
+            .obs-title { font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
+            .obs-text { font-size: 13px; font-weight: 700; word-break: break-word; }
+            @page { size: auto; margin: 4mm; }
+            @media print { html, body { width: 80mm; } .ticket { width: 100%; padding: 0; } }
+          </style>
+        </head>
+        <body>
+          <div class="ticket">
+            <div class="customer-header">
+              <div class="customer-header-title">Conferência do Cliente</div>
+              <div class="customer-line"><strong>Pedido:</strong> ${order.order_number || order.id}</div>
+              ${order.customers ? `
+                <div class="customer-name">${order.customers.name || 'NÃO INFORMADO'}</div>
+                <div class="customer-line phone"><strong>Telefone:</strong> ${phoneFormatted}</div>
+                <div class="customer-line"><strong>Endereço:</strong> ${order.customers.address || 'Não informado'}</div>
+              ` : `<div class="customer-line">Pedido sem cliente associado.</div>`}
+              ${order.notes ? `
+                <div class="obs-box">
+                  <div class="obs-title">Observação</div>
+                  <div class="obs-text">${order.notes}</div>
+                </div>
+              ` : ''}
+            </div>
+            <div class="cut-line"><span>Destacar aqui</span></div>
+            <div class="center">
+              <div class="title">Pedido Delivery</div>
+              <div class="order-number">${order.order_number || order.id}</div>
+            </div>
+            <div class="divider"></div>
+            <div class="section-title">Cliente</div>
+            ${order.customers ? `
+              <div class="customer-name">${order.customers.name || 'NÃO INFORMADO'}</div>
+              <div class="line phone"><strong>Telefone:</strong> ${phoneFormatted}</div>
+              <div class="line"><strong>Endereço:</strong> ${order.customers.address || 'Não informado'}</div>
+            ` : `<div class="line">Pedido sem cliente associado.</div>`}
+            <div class="divider"></div>
+            <div class="section-title">Dados do pedido</div>
+            <div class="line"><strong>Status:</strong> ${statusLabel[order.status]}</div>
+            <div class="line"><strong>Criado em:</strong> ${new Date(order.created_at).toLocaleString('pt-BR')}</div>
+            ${order.dispatched_at ? `<div class="line"><strong>Despachado em:</strong> ${new Date(order.dispatched_at).toLocaleString('pt-BR')}</div>` : ''}
+            ${order.notes ? `
+              <div class="divider"></div>
+              <div class="obs-box">
+                <div class="obs-title">Observação</div>
+                <div class="obs-text">${order.notes}</div>
+              </div>
+            ` : ''}
+            <div class="divider"></div>
+            <div class="section-title">Itens do pedido</div>
+            <table><tbody>${itemsHtml}</tbody></table>
+            <div class="divider"></div>
+            <div class="line highlight"><strong>Total de itens:</strong> ${totalItems} unidade(s)</div>
+            <div class="total-line"><span>TOTAL</span><span>${formatBRL(orderTotal)}</span></div>
+            <div class="divider"></div>
+            <div class="footer">Impresso pelo painel do administrador</div>
+          </div>
+          <script>
+            window.onload = function () {
+              window.print();
+              window.onafterprint = function () { window.close(); };
+            };
+          </script>
+        </body>
+      </html>
+    `;
+  }
+
+  function handlePrintOrder(order: OrderRow) {
+    const printWindow = window.open('', '_blank', 'width=420,height=800');
+    if (!printWindow) {
+      alert('Não foi possível abrir a janela de impressão. Verifique se o bloqueador de pop-up está desativado.');
+      return;
+    }
+    printWindow.document.open();
+    printWindow.document.write(buildPrintHtml(order));
+    printWindow.document.close();
   }
 
   if (loading) {
@@ -713,9 +1001,29 @@ export function OrderManagement() {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
                     {!editing ? (
                       <>
+                        <button
+                          onClick={() => handlePrintOrder(order)}
+                          className="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2"
+                          title="Imprimir pedido (com valores)"
+                        >
+                          <Printer className="w-4 h-4" />
+                          Imprimir
+                        </button>
+
+                        {order.status === 'pending' && (
+                          <button
+                            onClick={() => handleQuickDispatch(order)}
+                            className="px-3 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 flex items-center gap-2"
+                            title="Despachar pedido"
+                          >
+                            <Truck className="w-4 h-4" />
+                            Despachar
+                          </button>
+                        )}
+
                         <button
                           onClick={() => startEdit(order)}
                           className="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 flex items-center gap-2"
@@ -799,6 +1107,68 @@ export function OrderManagement() {
                             onChange={(e) => setDraftCashDate(e.target.value)}
                             className="border border-amber-300 rounded-lg px-3 py-2 text-sm bg-white"
                           />
+                        </div>
+                      )}
+
+                      {editing && (
+                        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 space-y-3">
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <div className="flex items-center gap-2 text-blue-900 dark:text-blue-100 font-semibold">
+                              <Users className="w-4 h-4" />
+                              Cliente do pedido
+                            </div>
+                            <button
+                              onClick={() => {
+                                setCustomerError(null);
+                                setShowNewCustomer(true);
+                              }}
+                              className="text-sm bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 transition flex items-center gap-1"
+                            >
+                              <Plus className="w-4 h-4" />
+                              Novo cliente
+                            </button>
+                          </div>
+
+                          <input
+                            value={customerQuery}
+                            onChange={(e) => setCustomerQuery(e.target.value)}
+                            placeholder="Buscar por nome/telefone/endereço..."
+                            className="w-full border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2 text-sm"
+                          />
+
+                          <select
+                            value={draftCustomerId}
+                            onChange={(e) => {
+                              setCustomerError(null);
+                              setDraftCustomerId(e.target.value);
+                            }}
+                            className="w-full border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2 text-sm"
+                          >
+                            <option value="">Sem cliente</option>
+                            {filteredCustomers.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.name} — {c.phone}
+                              </option>
+                            ))}
+                          </select>
+
+                          {draftCustomerId && (() => {
+                            const sel = customers.find((c) => c.id === draftCustomerId);
+                            if (!sel) return null;
+                            return (
+                              <div className="text-sm text-blue-900 dark:text-blue-200 space-y-1">
+                                <div><span className="font-semibold">Nome:</span> {sel.name}</div>
+                                <div><span className="font-semibold">Telefone:</span> {sel.phone}</div>
+                                <div><span className="font-semibold">Endereço:</span> {sel.address}</div>
+                              </div>
+                            );
+                          })()}
+
+                          {customerError && (
+                            <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-3 py-2 rounded-lg text-sm">
+                              {customerError}
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -968,6 +1338,83 @@ export function OrderManagement() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {showNewCustomer && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"
+          onClick={() => setShowNewCustomer(false)}
+        >
+          <div
+            className="bg-white dark:bg-slate-800 w-full max-w-xl rounded-2xl shadow-xl border border-gray-200 dark:border-slate-700"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b dark:border-slate-700">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Novo Cliente</h3>
+              <button
+                onClick={() => setShowNewCustomer(false)}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 dark:text-slate-300"
+                title="Fechar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="text-sm text-gray-700 dark:text-slate-300">Nome</label>
+                <input
+                  value={newCustomerName}
+                  onChange={(e) => setNewCustomerName(e.target.value)}
+                  className="mt-1 w-full border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2"
+                  placeholder="Ex: Leleko"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-700 dark:text-slate-300">Telefone</label>
+                <input
+                  value={newCustomerPhone}
+                  onChange={(e) => setNewCustomerPhone(e.target.value)}
+                  className="mt-1 w-full border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2"
+                  placeholder="Ex: (71) 99999-9999"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-700 dark:text-slate-300">Endereço</label>
+                <input
+                  value={newCustomerAddress}
+                  onChange={(e) => setNewCustomerAddress(e.target.value)}
+                  className="mt-1 w-full border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2"
+                  placeholder="Rua, número, bairro..."
+                />
+              </div>
+
+              {customerError && (
+                <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg text-sm">
+                  {customerError}
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t dark:border-slate-700 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setShowNewCustomer(false)}
+                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700/50"
+              >
+                Cancelar
+              </button>
+
+              <button
+                onClick={createCustomer}
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700"
+              >
+                Salvar Cliente
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
