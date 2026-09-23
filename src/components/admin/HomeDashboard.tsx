@@ -9,6 +9,7 @@ import {
   ShoppingCart,
   ArrowUpRight,
   Truck,
+  Trophy,
 } from 'lucide-react';
 
 function formatBRL(v: number) {
@@ -23,6 +24,12 @@ function toYMD(date: Date) {
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
+}
+
+function monthRangeYMD(date: Date) {
+  const start = new Date(date.getFullYear(), date.getMonth(), 1);
+  const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+  return { start: toYMD(start), end: toYMD(end) };
 }
 
 type DaySummary = {
@@ -48,6 +55,13 @@ type LowStockProduct = {
   stock_quantity: number;
 };
 
+type TopCustomer = {
+  id: string;
+  name: string;
+  orders: number;
+  total: number;
+};
+
 interface HomeDashboardProps {
   onNavigate: (tab: string) => void;
 }
@@ -64,6 +78,7 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps) {
   });
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [lowStock, setLowStock] = useState<LowStockProduct[]>([]);
+  const [topCustomers, setTopCustomers] = useState<TopCustomer[]>([]);
 
   useEffect(() => {
     loadAll();
@@ -134,6 +149,49 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps) {
         .order('stock_quantity', { ascending: true })
         .limit(10);
       setLowStock((lowStockData || []) as LowStockProduct[]);
+
+      // Top 5 compradores do mês (pedidos despachados, por valor gasto)
+      const { start, end } = monthRangeYMD(new Date());
+      const { data: monthOrders } = await supabase
+        .from('orders')
+        .select(`
+          id,
+          customer_id,
+          customers ( id, name ),
+          order_items ( quantity, unit_price )
+        `)
+        .eq('status', 'dispatched')
+        .gte('cash_date', start)
+        .lte('cash_date', end)
+        .not('customer_id', 'is', null);
+
+      const byCustomer = new Map<string, TopCustomer>();
+      for (const order of monthOrders || []) {
+        const o = order as any;
+        const customerId: string | null = o.customer_id;
+        if (!customerId) continue;
+
+        const orderTotal = (o.order_items || []).reduce(
+          (s: number, i: any) => s + Number(i.quantity || 0) * Number(i.unit_price || 0),
+          0
+        );
+
+        const current = byCustomer.get(customerId) || {
+          id: customerId,
+          name: o.customers?.name || 'Cliente',
+          orders: 0,
+          total: 0,
+        };
+        current.orders += 1;
+        current.total += orderTotal;
+        byCustomer.set(customerId, current);
+      }
+
+      setTopCustomers(
+        Array.from(byCustomer.values())
+          .sort((a, b) => b.total - a.total || b.orders - a.orders)
+          .slice(0, 5)
+      );
     } catch (e) {
       console.error(e);
     } finally {
@@ -321,6 +379,7 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps) {
           </div>
         </div>
 
+        <div className="space-y-6">
         {/* Estoque baixo - lista */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
@@ -359,6 +418,67 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps) {
               ))
             )}
           </div>
+        </div>
+
+        {/* Top 5 compradores do mês */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+            <div className="flex items-center gap-2 min-w-0">
+              <Trophy className="w-5 h-5 text-amber-500 dark:text-amber-400 shrink-0" />
+              <div className="min-w-0">
+                <h3 className="font-semibold text-slate-900 dark:text-white">Top Compradores</h3>
+                <p className="text-xs text-slate-400 dark:text-slate-500 capitalize">
+                  {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => onNavigate('customerHistory')}
+              className="text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium shrink-0"
+            >
+              Histórico
+            </button>
+          </div>
+
+          <div className="divide-y divide-slate-100 dark:divide-slate-700">
+            {topCustomers.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-slate-500 dark:text-slate-400 text-sm">Nenhuma compra despachada este mês</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">O ranking aparece conforme os pedidos forem despachados</p>
+              </div>
+            ) : (
+              topCustomers.map((customer, index) => {
+                const rankStyles = [
+                  'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+                  'bg-slate-200 text-slate-700 dark:bg-slate-600 dark:text-slate-200',
+                  'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+                ];
+                const badge = rankStyles[index] || 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400';
+
+                return (
+                  <div key={customer.id} className="flex items-center justify-between px-5 py-3 gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${badge}`}>
+                        {index + 1}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                          {customer.name}
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {customer.orders} {customer.orders === 1 ? 'pedido' : 'pedidos'}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
+                      {formatBRL(customer.total)}
+                    </span>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
         </div>
       </div>
     </div>
