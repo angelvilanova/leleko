@@ -380,46 +380,6 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps) {
         </div>
 
         <div className="space-y-6">
-        {/* Estoque baixo - lista */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
-            <div className="flex items-center gap-2">
-              <Package className="w-5 h-5 text-red-500 dark:text-red-400" />
-              <h3 className="font-semibold text-slate-900 dark:text-white">Estoque Baixo</h3>
-            </div>
-            <button
-              onClick={() => onNavigate('products')}
-              className="text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium"
-            >
-              Ver todos
-            </button>
-          </div>
-
-          <div className="divide-y divide-slate-100 dark:divide-slate-700">
-            {lowStock.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-emerald-600 dark:text-emerald-400 font-medium text-sm">Tudo abastecido!</p>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Nenhum produto com estoque baixo</p>
-              </div>
-            ) : (
-              lowStock.map((product) => (
-                <div key={product.id} className="flex items-center justify-between px-5 py-3">
-                  <p className="text-sm text-slate-900 dark:text-white font-medium truncate">
-                    {product.name}
-                  </p>
-                  <span className={`text-sm font-bold shrink-0 ml-3 ${
-                    product.stock_quantity === 0
-                      ? 'text-red-600 dark:text-red-400'
-                      : 'text-amber-600 dark:text-amber-400'
-                  }`}>
-                    {product.stock_quantity === 0 ? 'Esgotado' : `${product.stock_quantity} un.`}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
         {/* Top 5 compradores do mês */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
@@ -476,6 +436,46 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps) {
                   </div>
                 );
               })
+            )}
+          </div>
+        </div>
+
+        {/* Estoque baixo - lista */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+            <div className="flex items-center gap-2">
+              <Package className="w-5 h-5 text-red-500 dark:text-red-400" />
+              <h3 className="font-semibold text-slate-900 dark:text-white">Estoque Baixo</h3>
+            </div>
+            <button
+              onClick={() => onNavigate('products')}
+              className="text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium"
+            >
+              Ver todos
+            </button>
+          </div>
+
+          <div className="divide-y divide-slate-100 dark:divide-slate-700">
+            {lowStock.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-emerald-600 dark:text-emerald-400 font-medium text-sm">Tudo abastecido!</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Nenhum produto com estoque baixo</p>
+              </div>
+            ) : (
+              lowStock.map((product) => (
+                <div key={product.id} className="flex items-center justify-between px-5 py-3">
+                  <p className="text-sm text-slate-900 dark:text-white font-medium truncate">
+                    {product.name}
+                  </p>
+                  <span className={`text-sm font-bold shrink-0 ml-3 ${
+                    product.stock_quantity === 0
+                      ? 'text-red-600 dark:text-red-400'
+                      : 'text-amber-600 dark:text-amber-400'
+                  }`}>
+                    {product.stock_quantity === 0 ? 'Esgotado' : `${product.stock_quantity} un.`}
+                  </span>
+                </div>
+              ))
             )}
           </div>
         </div>
