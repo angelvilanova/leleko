@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import type { StoreCustomer } from './StoreShell';
 import { describeError, formatBRL, formatPhoneBR, friendlyError, isSessionExpired } from '../../lib/storeSession';
 import { useStoreSettings } from '../../lib/storeSettings';
+import { Card, SectionTitle, fieldClass, firstName, initials, primaryButton, secondaryButton, tileClass } from './ui';
 import {
   ShoppingCart,
   Plus,
@@ -20,6 +21,9 @@ import {
   Copy,
   Check,
   MessageCircle,
+  ChevronRight,
+  Trash2,
+  Sparkles,
 } from 'lucide-react';
 
 type PublicProduct = {
@@ -257,8 +261,8 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
 
   if (loading) {
     return (
-      <div className="py-16 text-center">
-        <Loader2 className="w-10 h-10 text-blue-600 animate-spin mx-auto mb-3" />
+      <div className="py-20 text-center">
+        <Loader2 className="w-10 h-10 text-emerald-600 animate-spin mx-auto mb-3" />
         <p className="text-slate-500">Carregando produtos...</p>
       </div>
     );
@@ -266,19 +270,18 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
 
   if (loadError) {
     return (
-      <div className="py-16 text-center max-w-sm mx-auto">
-        <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+      <Card className="py-14 px-6 text-center max-w-md mx-auto">
+        <span className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center mx-auto mb-4">
+          <AlertCircle className="w-7 h-7" />
+        </span>
         <p className="text-slate-700">{loadError}</p>
         {loadErrorDetail && (
           <p className="text-xs text-slate-400 mt-2 break-words">Detalhe técnico: {loadErrorDetail}</p>
         )}
-        <button
-          onClick={() => loadProducts(true)}
-          className="mt-5 bg-blue-600 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-blue-700 transition"
-        >
+        <button onClick={() => loadProducts(true)} className={`${primaryButton} mt-5 px-5 py-2.5 mx-auto`}>
           Tentar novamente
         </button>
-      </div>
+      </Card>
     );
   }
 
@@ -287,107 +290,115 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
     const whatsappText = encodeURIComponent(
       `Olá! Segue o comprovante do Pix do pedido ${placedOrder.number} (${formatBRL(placedOrder.total)}).`
     );
+    const waNumber = storeWhatsapp.startsWith('55') && storeWhatsapp.length >= 12 ? storeWhatsapp : `55${storeWhatsapp}`;
 
     return (
       <div className="max-w-lg mx-auto space-y-4">
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-center">
-          <CheckCircle2 className="w-14 h-14 text-emerald-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-slate-900">Pedido enviado!</h2>
-          <p className="text-2xl font-bold text-blue-600 mt-1">{placedOrder.number}</p>
+        <div className="text-center pt-2 pb-1">
+          <span className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-600/30 flex items-center justify-center mx-auto mb-4">
+            <CheckCircle2 className="w-10 h-10 text-white" />
+          </span>
+          <h2 className="text-2xl font-bold text-slate-900">Pedido enviado!</h2>
+          <p className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-semibold ring-1 ring-emerald-200">
+            {placedOrder.number}
+          </p>
           <p className="text-slate-600 mt-3 leading-relaxed">
             Recebemos seu pedido e ele está em análise. Em poucos minutos ele entra na fila de entrega.
           </p>
-
-          <div className="mt-6 text-left border-t border-slate-100 pt-4 space-y-2">
-            {placedOrder.items.map((item, index) => (
-              <div key={index} className="flex items-center justify-between text-sm">
-                <span className="text-slate-700">
-                  <span className="font-semibold">{item.quantity}x</span> {item.name}
-                </span>
-                <span className="text-slate-900 font-medium">{formatBRL(item.quantity * item.unit_price)}</span>
-              </div>
-            ))}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-              <span className="font-semibold text-slate-900">Total</span>
-              <span className="font-bold text-lg text-slate-900">{formatBRL(placedOrder.total)}</span>
-            </div>
-            <p className="text-xs text-slate-500 pt-1 flex items-start gap-1.5">
-              <MapPin className="w-4 h-4 shrink-0" />
-              <span>Entrega em: {placedOrder.address}</span>
-            </p>
-            <p className="text-xs text-slate-500 flex items-center gap-1.5">
-              {isPix ? <QrCode className="w-4 h-4" /> : <Banknote className="w-4 h-4" />}
-              {isPix ? 'Pagamento por Pix' : 'Pagamento na entrega'}
-            </p>
-          </div>
         </div>
 
-        {isPix && (
-          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 space-y-3">
-            <div className="flex items-center gap-2 text-emerald-900 font-semibold">
-              <QrCode className="w-5 h-5" />
-              Pagamento por Pix
+        <Card className="p-5">
+          <SectionTitle icon={ClipboardList}>Resumo</SectionTitle>
+          <div className="mt-4 space-y-2.5">
+            {placedOrder.items.map((item, index) => (
+              <div key={index} className="flex items-center justify-between text-sm gap-3">
+                <span className="text-slate-700 min-w-0 truncate">
+                  <span className="inline-flex items-center justify-center min-w-[1.75rem] px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-semibold mr-2">
+                    {item.quantity}x
+                  </span>
+                  {item.name}
+                </span>
+                <span className="text-slate-900 font-medium shrink-0">{formatBRL(item.quantity * item.unit_price)}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center justify-between mt-4 pt-4 border-t border-dashed border-slate-200">
+            <span className="font-semibold text-slate-900">Total</span>
+            <span className="font-bold text-xl text-emerald-700">{formatBRL(placedOrder.total)}</span>
+          </div>
+          <div className="mt-4 grid grid-cols-1 gap-2 text-sm">
+            <div className="flex items-start gap-2.5 bg-slate-50 rounded-xl px-3 py-2.5">
+              <MapPin className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+              <span className="text-slate-700">{placedOrder.address}</span>
             </div>
+            <div className="flex items-center gap-2.5 bg-slate-50 rounded-xl px-3 py-2.5">
+              {isPix ? <QrCode className="w-4 h-4 text-emerald-600" /> : <Banknote className="w-4 h-4 text-emerald-600" />}
+              <span className="text-slate-700">{isPix ? 'Pagamento por Pix' : 'Pagamento na entrega'}</span>
+            </div>
+          </div>
+        </Card>
+
+        {isPix && (
+          <Card className="p-5 ring-emerald-200 bg-gradient-to-b from-emerald-50/70 to-white">
+            <SectionTitle icon={QrCode}>Pagamento por Pix</SectionTitle>
 
             {pixConfigured ? (
-              <>
-                <div className="bg-white rounded-xl border border-emerald-200 p-3">
+              <div className="mt-4 space-y-3">
+                <div className="bg-white rounded-xl ring-1 ring-emerald-200 p-3.5">
                   <p className="text-xs text-slate-500">Chave Pix</p>
                   <div className="flex items-center justify-between gap-2 mt-1">
                     <p className="font-mono text-slate-900 break-all">{settings.pix_key.trim()}</p>
                     <button
                       onClick={copyPixKey}
-                      className="shrink-0 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition"
+                      className="shrink-0 text-emerald-700 hover:bg-emerald-50 ring-1 ring-emerald-200 px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition"
                     >
                       {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                       {copied ? 'Copiada' : 'Copiar'}
                     </button>
                   </div>
-                  {settings.pix_receiver.trim() && (
-                    <p className="text-xs text-slate-600 mt-2">
-                      Recebedor: <span className="font-medium">{settings.pix_receiver.trim()}</span>
-                    </p>
-                  )}
-                  <p className="text-xs text-slate-600 mt-1">
-                    Valor: <span className="font-semibold">{formatBRL(placedOrder.total)}</span>
-                  </p>
+                  <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
+                    {settings.pix_receiver.trim() && (
+                      <div className="bg-slate-50 rounded-lg px-2.5 py-2">
+                        <p className="text-slate-500">Recebedor</p>
+                        <p className="font-medium text-slate-800 truncate">{settings.pix_receiver.trim()}</p>
+                      </div>
+                    )}
+                    <div className="bg-slate-50 rounded-lg px-2.5 py-2">
+                      <p className="text-slate-500">Valor</p>
+                      <p className="font-semibold text-slate-800">{formatBRL(placedOrder.total)}</p>
+                    </div>
+                  </div>
                 </div>
                 {settings.pix_instructions.trim() && (
                   <p className="text-sm text-emerald-900">{settings.pix_instructions.trim()}</p>
                 )}
-              </>
+              </div>
             ) : (
-              <p className="text-sm text-emerald-900">
+              <p className="mt-3 text-sm text-emerald-900">
                 A chave Pix será enviada pelo WhatsApp da loja junto com a confirmação do pedido.
               </p>
             )}
 
             {storeWhatsapp && (
               <a
-                href={`https://wa.me/${storeWhatsapp.startsWith('55') && storeWhatsapp.length >= 12 ? storeWhatsapp : `55${storeWhatsapp}`}?text=${whatsappText}`}
+                href={`https://wa.me/${waNumber}?text=${whatsappText}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full bg-emerald-600 text-white py-3 rounded-xl font-semibold hover:bg-emerald-700 transition flex items-center justify-center gap-2"
+                className={`${primaryButton} w-full py-3 mt-4`}
               >
                 <MessageCircle className="w-5 h-5" />
                 Enviar comprovante pelo WhatsApp
               </a>
             )}
-          </div>
+          </Card>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <button
-            onClick={onViewOrders}
-            className="w-full border border-slate-300 text-slate-700 py-3 rounded-xl font-semibold hover:bg-slate-50 transition flex items-center justify-center gap-2 bg-white"
-          >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+          <button onClick={onViewOrders} className={`${secondaryButton} w-full py-3`}>
             <ClipboardList className="w-5 h-5" />
             Ver meus pedidos
           </button>
-          <button
-            onClick={() => setPlacedOrder(null)}
-            className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition"
-          >
+          <button onClick={() => setPlacedOrder(null)} className={`${primaryButton} w-full py-3`}>
             Fazer outro pedido
           </button>
         </div>
@@ -395,80 +406,111 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
     );
   }
 
-  const fieldClass =
-    'w-full border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent';
-
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <section className="lg:col-span-2 space-y-4">
+        <div className="rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-600 text-white p-5 shadow-md shadow-emerald-900/10 relative overflow-hidden">
+          <Sparkles className="w-24 h-24 text-white/10 absolute -right-4 -top-4" />
+          <p className="text-emerald-100 text-sm">Olá, {firstName(customer.name)}!</p>
+          <h2 className="text-xl font-bold mt-0.5">O que vai pedir hoje?</h2>
+          <div className="mt-3 inline-flex items-start gap-2 bg-white/15 rounded-xl px-3 py-2 text-sm max-w-full">
+            <MapPin className="w-4 h-4 mt-0.5 shrink-0" />
+            <span className="min-w-0">
+              {registeredAddress ? (
+                <>
+                  Entrega em <span className="font-medium">{registeredAddress}</span>
+                </>
+              ) : (
+                'Você informa o endereço no pedido'
+              )}
+            </span>
+          </div>
+        </div>
+
         {notice && (
-          <div className="bg-blue-50 border border-blue-200 text-blue-800 px-3 py-2 rounded-xl text-sm">{notice}</div>
+          <div className="bg-sky-50 ring-1 ring-sky-200 text-sky-800 px-3.5 py-2.5 rounded-xl text-sm">{notice}</div>
         )}
 
         <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar produto..."
-            className="w-full pl-9 pr-3 py-3 border border-slate-300 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className={`${fieldClass} pl-11 py-3 rounded-full bg-white`}
           />
         </div>
 
         {filteredProducts.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
-            <Package className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+          <Card className="text-center py-14">
+            <span className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+              <Package className="w-7 h-7" />
+            </span>
             <p className="text-slate-600">
               {products.length === 0 ? 'Nenhum produto disponível no momento.' : 'Nenhum produto encontrado.'}
             </p>
-          </div>
+          </Card>
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {filteredProducts.map((product) => {
               const quantity = cart[product.id] || 0;
               const lowStock = product.stock_quantity <= 5;
+              const inCart = quantity > 0;
 
               return (
-                <div
+                <Card
                   key={product.id}
-                  className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex items-center justify-between gap-4"
+                  className={`p-4 flex gap-3.5 transition ${inCart ? 'ring-emerald-300 shadow-emerald-600/10 shadow-md' : 'hover:shadow-md'}`}
                 >
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-slate-900">{product.name}</h3>
-                    {product.description && <p className="text-sm text-slate-600 mt-0.5">{product.description}</p>}
-                    <p className="text-base font-bold text-blue-600 mt-1">{formatBRL(product.price)}</p>
-                    {lowStock && <p className="text-xs text-amber-600 mt-0.5">Restam {product.stock_quantity} un.</p>}
+                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center font-bold text-lg shrink-0 ${tileClass(product.name)}`}>
+                    {initials(product.name)}
                   </div>
 
-                  {quantity === 0 ? (
-                    <button
-                      onClick={() => setQuantity(product, 1)}
-                      className="shrink-0 bg-blue-600 text-white px-4 py-2.5 rounded-xl font-medium hover:bg-blue-700 transition flex items-center gap-1.5"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Adicionar
-                    </button>
-                  ) : (
-                    <div className="shrink-0 flex items-center gap-2">
-                      <button
-                        onClick={() => setQuantity(product, quantity - 1)}
-                        className="w-10 h-10 rounded-xl border border-slate-300 bg-white flex items-center justify-center hover:bg-slate-100 transition"
-                        aria-label="Diminuir"
-                      >
-                        <Minus className="w-4 h-4 text-slate-700" />
-                      </button>
-                      <span className="w-8 text-center font-bold text-slate-900">{quantity}</span>
-                      <button
-                        onClick={() => setQuantity(product, quantity + 1)}
-                        disabled={quantity >= product.stock_quantity}
-                        className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                        aria-label="Aumentar"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
+                  <div className="min-w-0 flex-1 flex flex-col">
+                    <h3 className="font-semibold text-slate-900 leading-snug">{product.name}</h3>
+                    {product.description && (
+                      <p className="text-sm text-slate-500 mt-0.5 line-clamp-2">{product.description}</p>
+                    )}
+                    {lowStock && (
+                      <span className="inline-flex self-start mt-1.5 text-[11px] font-medium text-amber-700 bg-amber-50 ring-1 ring-amber-200 rounded-full px-2 py-0.5">
+                        Restam {product.stock_quantity}
+                      </span>
+                    )}
+
+                    <div className="mt-auto pt-3 flex items-center justify-between gap-2">
+                      <p className="text-lg font-bold text-emerald-700">{formatBRL(product.price)}</p>
+
+                      {!inCart ? (
+                        <button
+                          onClick={() => setQuantity(product, 1)}
+                          className="shrink-0 bg-emerald-600 text-white pl-3 pr-3.5 py-2 rounded-full text-sm font-semibold hover:bg-emerald-700 active:scale-[0.98] transition flex items-center gap-1"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Adicionar
+                        </button>
+                      ) : (
+                        <div className="shrink-0 flex items-center gap-1 bg-emerald-50 ring-1 ring-emerald-200 rounded-full p-1">
+                          <button
+                            onClick={() => setQuantity(product, quantity - 1)}
+                            className="w-8 h-8 rounded-full bg-white text-emerald-700 flex items-center justify-center hover:bg-emerald-100 transition"
+                            aria-label="Diminuir"
+                          >
+                            {quantity === 1 ? <Trash2 className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
+                          </button>
+                          <span className="w-7 text-center font-bold text-emerald-800">{quantity}</span>
+                          <button
+                            onClick={() => setQuantity(product, quantity + 1)}
+                            disabled={quantity >= product.stock_quantity}
+                            className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center hover:bg-emerald-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                            aria-label="Aumentar"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  </div>
+                </Card>
               );
             })}
           </div>
@@ -476,40 +518,53 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
       </section>
 
       <aside id="resumo" className="lg:col-span-1">
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 lg:sticky lg:top-20">
-          <div className="flex items-center gap-2 mb-4">
-            <ShoppingCart className="w-5 h-5 text-blue-600" />
-            <h2 className="text-lg font-bold text-slate-900">Seu pedido</h2>
-          </div>
+        <Card className="p-5 lg:sticky lg:top-24">
+          <SectionTitle
+            icon={ShoppingCart}
+            right={
+              totalItems > 0 ? (
+                <span className="text-xs font-semibold bg-emerald-600 text-white rounded-full px-2.5 py-1">
+                  {totalItems} {totalItems === 1 ? 'item' : 'itens'}
+                </span>
+              ) : null
+            }
+          >
+            Seu pedido
+          </SectionTitle>
 
           {cartItems.length === 0 ? (
-            <p className="text-sm text-slate-500 text-center py-6">Adicione produtos para montar seu pedido.</p>
+            <div className="text-center py-10">
+              <span className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                <ShoppingCart className="w-7 h-7" />
+              </span>
+              <p className="text-sm text-slate-500">Adicione produtos para montar seu pedido.</p>
+            </div>
           ) : (
             <>
-              <div className="space-y-2 mb-4 max-h-64 overflow-y-auto">
+              <div className="mt-4 space-y-2 max-h-56 overflow-y-auto pr-1">
                 {cartItems.map(({ product, quantity }) => (
                   <div key={product.id} className="flex items-center justify-between text-sm gap-3">
-                    <span className="text-slate-700 min-w-0 truncate">
-                      <span className="font-semibold">{quantity}x</span> {product.name}
+                    <span className="text-slate-700 min-w-0 truncate flex items-center gap-2">
+                      <span className="inline-flex items-center justify-center min-w-[1.75rem] px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-semibold">
+                        {quantity}x
+                      </span>
+                      <span className="truncate">{product.name}</span>
                     </span>
                     <span className="text-slate-900 font-medium shrink-0">{formatBRL(quantity * product.price)}</span>
                   </div>
                 ))}
               </div>
 
-              <div className="border-t border-slate-100 pt-4 space-y-5">
+              <div className="mt-5 pt-5 border-t border-dashed border-slate-200 space-y-6">
                 {/* Endereço de entrega */}
                 <div>
-                  <p className="flex items-center gap-1.5 text-sm font-medium text-slate-800 mb-2">
-                    <MapPin className="w-4 h-4 text-blue-600" />
-                    Endereço de entrega
-                  </p>
+                  <SectionTitle icon={MapPin} tone="sky">Endereço de entrega</SectionTitle>
 
-                  <div className="space-y-2">
+                  <div className="mt-3 space-y-2">
                     {registeredAddress && (
                       <label
-                        className={`flex items-start gap-2 p-3 rounded-xl border cursor-pointer transition ${
-                          addressMode === 'registered' ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'
+                        className={`flex items-start gap-3 p-3 rounded-xl ring-1 cursor-pointer transition ${
+                          addressMode === 'registered' ? 'ring-emerald-500 bg-emerald-50/60' : 'ring-slate-200 hover:bg-slate-50'
                         }`}
                       >
                         <input
@@ -520,9 +575,9 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
                             setAddressMode('registered');
                             setSubmitError(null);
                           }}
-                          className="mt-1"
+                          className="mt-1 accent-emerald-600"
                         />
-                        <span className="text-sm">
+                        <span className="text-sm min-w-0">
                           <span className="font-medium text-slate-900">Meu endereço cadastrado</span>
                           <span className="block text-slate-600 mt-0.5">{registeredAddress}</span>
                         </span>
@@ -530,8 +585,8 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
                     )}
 
                     <label
-                      className={`flex items-start gap-2 p-3 rounded-xl border cursor-pointer transition ${
-                        addressMode === 'custom' ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'
+                      className={`flex items-start gap-3 p-3 rounded-xl ring-1 cursor-pointer transition ${
+                        addressMode === 'custom' ? 'ring-emerald-500 bg-emerald-50/60' : 'ring-slate-200 hover:bg-slate-50'
                       }`}
                     >
                       <input
@@ -542,7 +597,7 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
                           setAddressMode('custom');
                           setSubmitError(null);
                         }}
-                        className="mt-1"
+                        className="mt-1 accent-emerald-600"
                       />
                       <span className="text-sm font-medium text-slate-900">
                         {registeredAddress ? 'Entregar em outro endereço' : 'Informar endereço de entrega'}
@@ -552,40 +607,13 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
 
                   {addressMode === 'custom' && (
                     <div className="mt-3 space-y-2">
-                      <input
-                        value={street}
-                        onChange={(e) => setStreet(e.target.value)}
-                        placeholder="Rua e número *"
-                        className={fieldClass}
-                        autoComplete="street-address"
-                      />
-                      <input
-                        value={complement}
-                        onChange={(e) => setComplement(e.target.value)}
-                        placeholder="Complemento (apto, bloco, casa)"
-                        className={fieldClass}
-                      />
+                      <input value={street} onChange={(e) => setStreet(e.target.value)} placeholder="Rua e número *" className={fieldClass} autoComplete="street-address" />
+                      <input value={complement} onChange={(e) => setComplement(e.target.value)} placeholder="Complemento (apto, bloco, casa)" className={fieldClass} />
                       <div className="grid grid-cols-2 gap-2">
-                        <input
-                          value={neighborhood}
-                          onChange={(e) => setNeighborhood(e.target.value)}
-                          placeholder="Bairro *"
-                          className={fieldClass}
-                        />
-                        <input
-                          value={city}
-                          onChange={(e) => setCity(e.target.value)}
-                          placeholder="Cidade *"
-                          className={fieldClass}
-                          autoComplete="address-level2"
-                        />
+                        <input value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} placeholder="Bairro *" className={fieldClass} />
+                        <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Cidade *" className={fieldClass} autoComplete="address-level2" />
                       </div>
-                      <input
-                        value={reference}
-                        onChange={(e) => setReference(e.target.value)}
-                        placeholder="Ponto de referência"
-                        className={fieldClass}
-                      />
+                      <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Ponto de referência" className={fieldClass} />
                       <p className="text-xs text-slate-500">* obrigatório</p>
                     </div>
                   )}
@@ -593,41 +621,30 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
 
                 {/* Forma de pagamento */}
                 <div>
-                  <p className="flex items-center gap-1.5 text-sm font-medium text-slate-800 mb-2">
-                    <Banknote className="w-4 h-4 text-emerald-600" />
-                    Forma de pagamento
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <label
-                      className={`flex flex-col items-center gap-1 p-3 rounded-xl border cursor-pointer text-sm transition ${
-                        payment === 'pix' ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 hover:bg-slate-50'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="payment"
-                        className="sr-only"
-                        checked={payment === 'pix'}
-                        onChange={() => setPayment('pix')}
-                      />
-                      <QrCode className={`w-5 h-5 ${payment === 'pix' ? 'text-emerald-700' : 'text-slate-500'}`} />
-                      <span className="font-medium text-slate-900">Pix</span>
-                    </label>
-                    <label
-                      className={`flex flex-col items-center gap-1 p-3 rounded-xl border cursor-pointer text-sm transition ${
-                        payment === 'on_delivery' ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 hover:bg-slate-50'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="payment"
-                        className="sr-only"
-                        checked={payment === 'on_delivery'}
-                        onChange={() => setPayment('on_delivery')}
-                      />
-                      <Banknote className={`w-5 h-5 ${payment === 'on_delivery' ? 'text-emerald-700' : 'text-slate-500'}`} />
-                      <span className="font-medium text-slate-900">Na entrega</span>
-                    </label>
+                  <SectionTitle icon={Banknote} tone="amber">Forma de pagamento</SectionTitle>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    {(
+                      [
+                        { id: 'pix' as PaymentMethod, label: 'Pix', icon: QrCode },
+                        { id: 'on_delivery' as PaymentMethod, label: 'Na entrega', icon: Banknote },
+                      ] as const
+                    ).map(({ id, label, icon: Icon }) => {
+                      const active = payment === id;
+                      return (
+                        <label
+                          key={id}
+                          className={`flex flex-col items-center gap-1.5 p-3 rounded-xl ring-1 cursor-pointer text-sm transition ${
+                            active ? 'ring-emerald-500 bg-emerald-50/60' : 'ring-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          <input type="radio" name="payment" className="sr-only" checked={active} onChange={() => setPayment(id)} />
+                          <span className={`w-9 h-9 rounded-lg flex items-center justify-center ${active ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                            <Icon className="w-5 h-5" />
+                          </span>
+                          <span className="font-medium text-slate-900">{label}</span>
+                        </label>
+                      );
+                    })}
                   </div>
                   <p className="text-xs text-slate-500 mt-2">
                     {payment === 'pix'
@@ -640,39 +657,30 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
 
                 {/* Observação */}
                 <div>
-                  <label className="flex items-center gap-1.5 text-sm text-slate-700 mb-1">
-                    <FileText className="w-4 h-4" />
-                    Observação
-                  </label>
+                  <SectionTitle icon={FileText} tone="slate">Observação</SectionTitle>
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     maxLength={500}
                     rows={3}
                     placeholder="Ex: entregar a partir das 14h, ligar antes, troco para R$ 50..."
-                    className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={`${fieldClass} mt-3 resize-none`}
                   />
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-600">
-                    {totalItems} {totalItems === 1 ? 'item' : 'itens'}
-                  </span>
+                <div className="bg-slate-50 rounded-xl px-4 py-3 flex items-center justify-between">
+                  <span className="text-slate-600 text-sm">Total</span>
                   <span className="text-2xl font-bold text-slate-900">{formatBRL(totalValue)}</span>
                 </div>
 
                 {submitError && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-xl text-sm flex items-start gap-2">
+                  <div className="bg-rose-50 ring-1 ring-rose-200 text-rose-700 px-3.5 py-2.5 rounded-xl text-sm flex items-start gap-2">
                     <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                     <span>{submitError}</span>
                   </div>
                 )}
 
-                <button
-                  onClick={submitOrder}
-                  disabled={submitting}
-                  className="w-full bg-emerald-600 text-white py-3.5 rounded-xl font-semibold hover:bg-emerald-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
-                >
+                <button onClick={submitOrder} disabled={submitting} className={`${primaryButton} w-full py-3.5 text-base`}>
                   {submitting ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
@@ -686,26 +694,29 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
                   )}
                 </button>
 
-                <p className="text-[11px] text-slate-400 text-center">
+                <p className="text-[11px] text-slate-400 text-center -mt-2">
                   Contato cadastrado: {formatPhoneBR(customer.phone) || 'não informado'}
                 </p>
               </div>
             </>
           )}
-        </div>
+        </Card>
       </aside>
 
       {cartItems.length > 0 && (
-        <div className="lg:hidden fixed bottom-14 inset-x-0 bg-white/95 backdrop-blur border-t border-slate-200 p-3 z-20">
+        <div className="lg:hidden fixed bottom-[3.75rem] inset-x-0 px-4 pb-2 z-20 pointer-events-none">
           <a
             href="#resumo"
-            className="flex items-center justify-between bg-blue-600 text-white rounded-xl px-4 py-3 font-semibold"
+            className={`${primaryButton} pointer-events-auto w-full max-w-md mx-auto px-4 py-3 justify-between`}
           >
             <span className="flex items-center gap-2">
-              <ShoppingCart className="w-5 h-5" />
-              {totalItems} {totalItems === 1 ? 'item' : 'itens'}
+              <span className="bg-white/20 rounded-full px-2 py-0.5 text-xs font-semibold">{totalItems}</span>
+              Ver pedido
             </span>
-            <span>{formatBRL(totalValue)}</span>
+            <span className="flex items-center gap-1">
+              {formatBRL(totalValue)}
+              <ChevronRight className="w-4 h-4" />
+            </span>
           </a>
         </div>
       )}
