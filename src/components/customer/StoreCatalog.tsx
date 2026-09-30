@@ -15,7 +15,6 @@ import {
   AlertCircle,
   FileText,
   Loader2,
-  Banknote,
   ClipboardList,
   QrCode,
   Copy,
@@ -92,7 +91,8 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
   const [neighborhood, setNeighborhood] = useState('');
   const [city, setCity] = useState('');
   const [reference, setReference] = useState('');
-  const [payment, setPayment] = useState<PaymentMethod>('on_delivery');
+  // Única forma de pagamento por enquanto. A operação do Pix será definida depois.
+  const payment: PaymentMethod = 'pix';
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -286,7 +286,6 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
   }
 
   if (placedOrder) {
-    const isPix = placedOrder.payment === 'pix';
     const whatsappText = encodeURIComponent(
       `Olá! Segue o comprovante do Pix do pedido ${placedOrder.number} (${formatBRL(placedOrder.total)}).`
     );
@@ -332,14 +331,13 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
               <span className="text-slate-700">{placedOrder.address}</span>
             </div>
             <div className="flex items-center gap-2.5 bg-slate-50 rounded-xl px-3 py-2.5">
-              {isPix ? <QrCode className="w-4 h-4 text-emerald-600" /> : <Banknote className="w-4 h-4 text-emerald-600" />}
-              <span className="text-slate-700">{isPix ? 'Pagamento por Pix' : 'Pagamento na entrega'}</span>
+              <QrCode className="w-4 h-4 text-emerald-600" />
+              <span className="text-slate-700">Pagamento por Pix</span>
             </div>
           </div>
         </Card>
 
-        {isPix && (
-          <Card className="p-5 ring-emerald-200 bg-gradient-to-b from-emerald-50/70 to-white">
+        <Card className="p-5 ring-emerald-200 bg-gradient-to-b from-emerald-50/70 to-white">
             <SectionTitle icon={QrCode}>Pagamento por Pix</SectionTitle>
 
             {pixConfigured ? (
@@ -391,7 +389,6 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
               </a>
             )}
           </Card>
-        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
           <button onClick={onViewOrders} className={`${secondaryButton} w-full py-3`}>
@@ -619,40 +616,22 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
                   )}
                 </div>
 
-                {/* Forma de pagamento */}
+                {/* Pagamento: só Pix por enquanto */}
                 <div>
-                  <SectionTitle icon={Banknote} tone="amber">Forma de pagamento</SectionTitle>
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    {(
-                      [
-                        { id: 'pix' as PaymentMethod, label: 'Pix', icon: QrCode },
-                        { id: 'on_delivery' as PaymentMethod, label: 'Na entrega', icon: Banknote },
-                      ] as const
-                    ).map(({ id, label, icon: Icon }) => {
-                      const active = payment === id;
-                      return (
-                        <label
-                          key={id}
-                          className={`flex flex-col items-center gap-1.5 p-3 rounded-xl ring-1 cursor-pointer text-sm transition ${
-                            active ? 'ring-emerald-500 bg-emerald-50/60' : 'ring-slate-200 hover:bg-slate-50'
-                          }`}
-                        >
-                          <input type="radio" name="payment" className="sr-only" checked={active} onChange={() => setPayment(id)} />
-                          <span className={`w-9 h-9 rounded-lg flex items-center justify-center ${active ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                            <Icon className="w-5 h-5" />
-                          </span>
-                          <span className="font-medium text-slate-900">{label}</span>
-                        </label>
-                      );
-                    })}
+                  <SectionTitle icon={QrCode} tone="amber">Pagamento</SectionTitle>
+                  <div className="mt-3 flex items-center gap-3 p-3 rounded-xl ring-1 ring-emerald-200 bg-emerald-50/60">
+                    <span className="w-9 h-9 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                      <QrCode className="w-5 h-5" />
+                    </span>
+                    <div className="text-sm min-w-0">
+                      <p className="font-medium text-slate-900">Pix</p>
+                      <p className="text-slate-600 text-xs mt-0.5">
+                        {pixConfigured
+                          ? 'A chave Pix aparece depois de enviar o pedido.'
+                          : 'A chave Pix será enviada pelo WhatsApp da loja.'}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-xs text-slate-500 mt-2">
-                    {payment === 'pix'
-                      ? pixConfigured
-                        ? 'A chave Pix aparece depois de enviar o pedido.'
-                        : 'A chave Pix será enviada pelo WhatsApp da loja.'
-                      : 'Dinheiro ou cartão no momento da entrega.'}
-                  </p>
                 </div>
 
                 {/* Observação */}
