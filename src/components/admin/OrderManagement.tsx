@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { Check, Edit3, Trash2, X, Plus, Minus, Package, User, CalendarDays, ArrowUpDown, FileText, Printer, Truck, Users, CheckCircle2, XCircle, Link2, Clock } from 'lucide-react';
+import { Check, Edit3, Trash2, X, Plus, Minus, Package, User, CalendarDays, ArrowUpDown, FileText, Printer, Truck, Users, Link2 } from 'lucide-react';
+import { CustomerOrderRequests } from './CustomerOrderRequests';
 
 type Product = {
   id: string;
@@ -32,15 +33,12 @@ type OrderItem = {
 type OrderRow = {
   id: string;
   order_number: string;
-  status: 'awaiting_approval' | 'pending' | 'dispatched' | 'cancelled';
+  status: 'pending' | 'dispatched' | 'cancelled';
   created_at: string;
   dispatched_at: string | null;
   cash_date?: string | null;
   notes?: string | null;
   customer_id: string | null;
-  origin?: 'admin' | 'customer_link' | null;
-  approved_at?: string | null;
-  approval_mode?: 'manual' | 'auto' | null;
   customers: Customer | null;
   order_items: OrderItem[];
 };
@@ -54,14 +52,12 @@ type DraftItem = {
 };
 
 const statusLabel: Record<OrderRow['status'], string> = {
-  awaiting_approval: 'Aguardando aprovação',
   pending: 'Pendente',
   dispatched: 'Despachado',
   cancelled: 'Cancelado',
 };
 
 const statusClasses: Record<OrderRow['status'], string> = {
-  awaiting_approval: 'bg-purple-50 text-purple-700 border-purple-200',
   pending: 'bg-yellow-50 text-yellow-700 border-yellow-200',
   dispatched: 'bg-green-50 text-green-700 border-green-200',
   cancelled: 'bg-red-50 text-red-700 border-red-200',
@@ -151,9 +147,8 @@ export function OrderManagement() {
   const [dispatchFrom, setDispatchFrom] = useState('');
   const [dispatchTo, setDispatchTo] = useState('');
 
-  // Pedidos do link do cliente aguardando decisão
-  const [onlyAwaiting, setOnlyAwaiting] = useState(false);
-  const [deciding, setDeciding] = useState<string | null>(null);
+  // Pedidos que nasceram no link do cliente e já foram aprovados (só para o selo).
+  const [linkOrderIds, setLinkOrderIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     (async () => {
@@ -185,10 +180,6 @@ export function OrderManagement() {
     const q = query.trim().toLowerCase();
     let result = orders;
 
-    if (onlyAwaiting) {
-      result = result.filter((o) => o.status === 'awaiting_approval');
-    }
-
     if (q) {
       result = result.filter((o) => {
         const c = o.customers;
@@ -212,7 +203,7 @@ export function OrderManagement() {
     }
 
     return result;
-  }, [orders, query, sortAsc, onlyAwaiting]);
+  }, [orders, query, sortAsc]);
 
   async function loadProducts() {
     const { data, error } = await supabase
@@ -295,13 +286,6 @@ export function OrderManagement() {
   }
 
   async function loadOrders() {
-    // Rede de segurança: aprova pedidos do link que passaram de 5 minutos,
-    // mesmo que o job automático do banco não esteja rodando.
-    const { error: autoApproveErr } = await supabase.rpc('approve_expired_orders');
-    if (autoApproveErr) {
-      console.warn('approve_expired_orders:', autoApproveErr.message);
-    }
-
     let q = supabase
       .from('orders')
       .select(
@@ -314,9 +298,6 @@ export function OrderManagement() {
         cash_date,
         notes,
         customer_id,
-        origin,
-        approved_at,
-        approval_mode,
         customers ( id, name, phone, address ),
         order_items (
           id,
@@ -345,6 +326,22 @@ export function OrderManagement() {
     }
 
     setOrders((data || []) as OrderRow[]);
+
+    // Marca quais pedidos vieram do link do cliente. Vive numa tabela separada;
+    // se ela ainda não existir, a lista de pedidos segue normalmente.
+    const { data: linked } = await supabase
+      .from('customer_order_requests')
+      .select('order_id')
+      .eq('status', 'approved')
+      .not('order_id', 'is', null);
+
+    setLinkOrderIds(
+      new Set(
+        ((linked || []) as { order_id: string | null }[])
+          .map((r) => r.order_id)
+          .filter((id): id is string => Boolean(id))
+      )
+    );
   }
 
   function applyQuickRange(range: 'today' | 'yesterday' | 'month') {
@@ -711,74 +708,6 @@ export function OrderManagement() {
     }
   }
 
-  async function approveOrder(order: OrderRow) {
-    setDeciding(order.id);
-
-    try {
-      // O filtro por status evita decidir duas vezes se o job automático
-      // já tiver aprovado o pedido nesse meio tempo.
-      const { error } = await supabase
-        .from('orders')
-        .update({
-          status: 'pending',
-          approved_at: new Date().toISOString(),
-          approval_mode: 'manual',
-          cash_date: toYMD(new Date()),
-        })
-        .eq('id', order.id)
-        .eq('status', 'awaiting_approval');
-
-      if (error) throw error;
-      await loadOrders();
-    } catch (e) {
-      console.error(e);
-      alert('Não foi possível aprovar o pedido.');
-    } finally {
-      setDeciding(null);
-    }
-  }
-
-  async function rejectOrder(order: OrderRow) {
-    const ok = confirm(`Reprovar o pedido ${order.order_number}? O estoque reservado será devolvido.`);
-    if (!ok) return;
-
-    setDeciding(order.id);
-
-    try {
-      const { data: updated, error } = await supabase
-        .from('orders')
-        .update({ status: 'cancelled', dispatched_at: null })
-        .eq('id', order.id)
-        .eq('status', 'awaiting_approval')
-        .select('id');
-
-      if (error) throw error;
-
-      if (!updated || updated.length === 0) {
-        alert('Este pedido já foi aprovado automaticamente. Se precisar, cancele pelo botão Editar.');
-        await loadOrders();
-        return;
-      }
-
-      // Devolve o estoque reservado na criação do pedido.
-      for (const it of order.order_items) {
-        const { error: stockErr } = await supabase.rpc('increment_stock', {
-          p_id: it.product_id,
-          qty: it.quantity,
-        });
-        if (stockErr) throw stockErr;
-      }
-
-      await Promise.all([loadOrders(), loadProducts()]);
-    } catch (e) {
-      console.error(e);
-      alert('Não foi possível reprovar o pedido. Verifique o estoque no painel de produtos.');
-      await Promise.all([loadOrders(), loadProducts()]);
-    } finally {
-      setDeciding(null);
-    }
-  }
-
   function buildPrintHtml(order: OrderRow) {
     const items = order.order_items || [];
     const totalItems = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
@@ -924,8 +853,6 @@ export function OrderManagement() {
     printWindow.document.close();
   }
 
-  const awaitingCount = orders.filter((o) => o.status === 'awaiting_approval').length;
-
   if (loading) {
     return <div className="text-center py-8 text-gray-600 dark:text-slate-400">Carregando pedidos...</div>;
   }
@@ -942,21 +869,6 @@ export function OrderManagement() {
             className="border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2 text-sm w-80 max-w-full"
             placeholder="Buscar por pedido, status, cliente..."
           />
-
-          {(awaitingCount > 0 || onlyAwaiting) && (
-            <button
-              onClick={() => setOnlyAwaiting((prev) => !prev)}
-              className={`px-3 py-2 rounded-lg border text-sm flex items-center gap-2 font-medium transition ${
-                onlyAwaiting
-                  ? 'bg-purple-600 border-purple-600 text-white hover:bg-purple-700'
-                  : 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/30 dark:border-purple-800 dark:text-purple-300'
-              }`}
-              title={onlyAwaiting ? 'Mostrar todos os pedidos' : 'Mostrar só pedidos aguardando aprovação'}
-            >
-              <Clock className="w-4 h-4" />
-              Aguardando aprovação ({awaitingCount})
-            </button>
-          )}
 
           <button
             onClick={() => {
@@ -1036,6 +948,12 @@ export function OrderManagement() {
         </div>
       </div>
 
+      <CustomerOrderRequests
+        onDecided={async () => {
+          await Promise.all([loadOrders(), loadProducts()]);
+        }}
+      />
+
       {filteredOrders.length === 0 ? (
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm p-8 text-center text-gray-600 dark:text-slate-400">
           Nenhum pedido encontrado.
@@ -1053,14 +971,7 @@ export function OrderManagement() {
             );
 
             return (
-              <div
-                key={order.id}
-                className={`bg-white dark:bg-slate-800 rounded-xl border shadow-sm overflow-hidden ${
-                  order.status === 'awaiting_approval'
-                    ? 'border-purple-300 dark:border-purple-700 ring-2 ring-purple-100 dark:ring-purple-900/40'
-                    : 'border-gray-200 dark:border-slate-700'
-                }`}
-              >
+              <div key={order.id} className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
                 <div className="p-5 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
                   <div className="min-w-0 flex-1">
                     <button
@@ -1089,20 +1000,13 @@ export function OrderManagement() {
                           Status: <span className="font-semibold">{statusLabel[order.status]}</span>
                         </span>
 
-                        {order.origin === 'customer_link' && (
+                        {linkOrderIds.has(order.id) && (
                           <span
                             className="text-xs px-3 py-1 rounded-full border bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800 flex items-center gap-1"
-                            title={
-                              order.approval_mode === 'auto'
-                                ? 'Aprovado automaticamente após 5 minutos'
-                                : order.approval_mode === 'manual'
-                                ? 'Aprovado manualmente'
-                                : 'Feito pelo cliente no link próprio'
-                            }
+                            title="Feito pelo cliente no link próprio e aprovado"
                           >
                             <Link2 className="w-3 h-3" />
                             Pedido pelo link
-                            {order.approval_mode === 'auto' && ' · aprovado automaticamente'}
                           </span>
                         )}
                       </div>
@@ -1136,30 +1040,6 @@ export function OrderManagement() {
                   <div className="flex flex-wrap items-center gap-2 sm:justify-end w-full sm:w-auto">
                     {!editing ? (
                       <>
-                        {order.status === 'awaiting_approval' && (
-                          <>
-                            <button
-                              onClick={() => approveOrder(order)}
-                              disabled={deciding === order.id}
-                              className="px-3 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 flex items-center gap-2 disabled:opacity-50"
-                              title="Aprovar pedido: entra na fila do operador"
-                            >
-                              <CheckCircle2 className="w-4 h-4" />
-                              {deciding === order.id ? 'Aguarde...' : 'Aprovar'}
-                            </button>
-
-                            <button
-                              onClick={() => rejectOrder(order)}
-                              disabled={deciding === order.id}
-                              className="px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 flex items-center gap-2 disabled:opacity-50"
-                              title="Reprovar pedido: cancela e devolve o estoque"
-                            >
-                              <XCircle className="w-4 h-4" />
-                              Reprovar
-                            </button>
-                          </>
-                        )}
-
                         <button
                           onClick={() => handlePrintOrder(order)}
                           className="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2"
@@ -1235,7 +1115,6 @@ export function OrderManagement() {
                             onChange={(e) => setDraftStatus(e.target.value as OrderRow['status'])}
                             className="border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2 text-sm"
                           >
-                            <option value="awaiting_approval">Aguardando aprovação</option>
                             <option value="pending">Pendente</option>
                             <option value="dispatched">Despachado</option>
                             <option value="cancelled">Cancelado</option>

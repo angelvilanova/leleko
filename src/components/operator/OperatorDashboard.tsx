@@ -64,8 +64,6 @@ export function OperatorDashboard() {
           profiles!orders_created_by_fkey(id, email, role),
           order_items( *, products(*) )
         `)
-        // Pedidos do link do cliente só aparecem para o operador depois de aprovados.
-        .neq('status', 'awaiting_approval')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -125,8 +123,6 @@ export function OperatorDashboard() {
 
   const getStatusConfig = (status: string): StatusConfig => {
     switch (status) {
-      case 'awaiting_approval':
-        return { label: 'Aguardando aprovação', color: 'bg-purple-100 text-purple-800 border-purple-200', icon: Clock as typeof Package };
       case 'pending':
         return { label: 'Pendente', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: Clock as typeof Package };
       case 'dispatched':

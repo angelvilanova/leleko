@@ -143,7 +143,7 @@ export function CustomerOrderPage({ token }: { token: string }) {
     setSubmitError(null);
 
     try {
-      const { data, error } = await supabase.rpc('create_customer_order', {
+      const { data, error } = await supabase.rpc('create_customer_order_request', {
         p_token: token,
         p_items: cartItems.map((item) => ({
           product_id: item.product.id,
@@ -155,7 +155,7 @@ export function CustomerOrderPage({ token }: { token: string }) {
       if (error) throw error;
 
       const row = Array.isArray(data) ? data[0] : data;
-      const orderNumber: string = row?.order_number || 'seu pedido';
+      const orderNumber: string = row?.request_number || 'seu pedido';
 
       setPlacedOrder({
         order_number: orderNumber,

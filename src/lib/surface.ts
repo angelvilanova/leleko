@@ -6,7 +6,8 @@
  *   - cliente (link próprio): VITE_APP_SURFACE = 'customer'
  *
  * Cada endereço monta apenas a sua parte. No endereço do cliente a tela de
- * login nunca é carregada.
+ * login nunca é carregada. O painel não muda em nada quando a variável está
+ * ausente.
  */
 export type AppSurface = 'panel' | 'customer';
 
@@ -19,6 +20,7 @@ export const CUSTOMER_APP_URL: string = (
   (import.meta.env.VITE_CUSTOMER_APP_URL as string | undefined) || DEFAULT_CUSTOMER_APP_URL
 ).replace(/\/+$/, '');
 
-export function customerOrderLink(linkToken: string): string {
-  return `${CUSTOMER_APP_URL}/pedido/${linkToken}`;
+/** Link próprio do cliente. Usa query string para não exigir configuração de rotas. */
+export function customerOrderLink(token: string): string {
+  return `${CUSTOMER_APP_URL}/?c=${token}`;
 }

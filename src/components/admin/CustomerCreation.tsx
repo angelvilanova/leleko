@@ -164,14 +164,23 @@ export function CustomerCreation() {
     }
   }
 
+  // O link do cliente vive numa tabela separada (customer_links) e é gerado
+  // sob demanda pelo banco. A tabela de clientes não muda.
+  async function fetchCustomerLink(customer: Customer): Promise<string | null> {
+    const { data, error } = await supabase.rpc('ensure_customer_link', { p_customer_id: customer.id });
+    if (error || !data) {
+      console.error(error);
+      setMessage({ type: 'err', text: 'Não foi possível gerar o link deste cliente.' });
+      return null;
+    }
+    return customerOrderLink(String(data));
+  }
+
   async function copyLink(customer: Customer) {
     setMessage(null);
-    if (!customer.link_token) {
-      setMessage({ type: 'err', text: 'Este cliente ainda não tem link. Recarregue a página.' });
-      return;
-    }
+    const link = await fetchCustomerLink(customer);
+    if (!link) return;
 
-    const link = customerOrderLink(customer.link_token);
     try {
       await navigator.clipboard.writeText(link);
       setMessage({ type: 'ok', text: `Link de ${customer.name} copiado.` });
@@ -180,19 +189,36 @@ export function CustomerCreation() {
     }
   }
 
-  function whatsappLinkFor(customer: Customer): string | null {
-    if (!customer.link_token) return null;
+  async function sendLinkByWhatsApp(customer: Customer) {
+    setMessage(null);
 
     const digits = phoneNorm(customer.phone || '');
-    if (!digits) return null;
+    if (!digits) {
+      setMessage({ type: 'err', text: 'Este cliente não tem telefone cadastrado.' });
+      return;
+    }
+
+    // Abre a janela antes da chamada ao banco para o navegador não bloquear o pop-up.
+    const popup = window.open('', '_blank', 'noopener,noreferrer');
+
+    const link = await fetchCustomerLink(customer);
+    if (!link) {
+      popup?.close();
+      return;
+    }
 
     const withCountry = digits.startsWith('55') && digits.length >= 12 ? digits : `55${digits}`;
     const text =
       `Olá, ${customer.name}! Aqui está o seu link para fazer pedidos:\n` +
-      `${customerOrderLink(customer.link_token)}\n\n` +
+      `${link}\n\n` +
       `Guarde este link. Ele é só seu.`;
+    const url = `https://wa.me/${withCountry}?text=${encodeURIComponent(text)}`;
 
-    return `https://wa.me/${withCountry}?text=${encodeURIComponent(text)}`;
+    if (popup) {
+      popup.location.href = url;
+    } else {
+      window.prompt('Abra este endereço para enviar pelo WhatsApp:', url);
+    }
   }
 
   if (loading) {
@@ -315,17 +341,13 @@ export function CustomerCreation() {
                     <Link2 className="w-5 h-5" />
                   </button>
 
-                  {whatsappLinkFor(c) && (
-                    <a
-                      href={whatsappLinkFor(c) || undefined}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-emerald-600 hover:text-emerald-800 transition"
-                      title="Enviar link pelo WhatsApp"
-                    >
-                      <MessageCircle className="w-5 h-5" />
-                    </a>
-                  )}
+                  <button
+                    onClick={() => sendLinkByWhatsApp(c)}
+                    className="text-emerald-600 hover:text-emerald-800 transition"
+                    title="Enviar link de pedidos pelo WhatsApp"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                  </button>
 
                   <button
                     onClick={() => handleEdit(c)}
