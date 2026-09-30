@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { friendlyError } from '../../lib/storeSession';
+import { storeDisplayName, useStoreSettings } from '../../lib/storeSettings';
 import { ShoppingBag, Smartphone, Loader2, AlertCircle, ArrowRight } from 'lucide-react';
 
 function maskPhone(raw: string): string {
@@ -17,6 +18,9 @@ function maskPhone(raw: string): string {
  * na função store_login do banco.
  */
 export function StoreLogin({ onLoggedIn }: { onLoggedIn: (token: string) => void }) {
+  const settings = useStoreSettings();
+  const storeName = storeDisplayName(settings);
+
   const [phone, setPhone] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +59,7 @@ export function StoreLogin({ onLoggedIn }: { onLoggedIn: (token: string) => void
           <div className="w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center mx-auto mb-4 shadow-sm shadow-blue-600/30">
             <ShoppingBag className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Leleko</h1>
+          <h1 className="text-2xl font-bold text-slate-900">{storeName}</h1>
           <p className="text-slate-600 mt-1">Faça seu pedido online</p>
         </div>
 
