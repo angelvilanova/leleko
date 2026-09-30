@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Customer } from '../../types/database';
-import { customerOrderLink } from '../../lib/surface';
+import { STORE_URL } from '../../lib/surface';
 import { Plus, Trash2, Search, Edit2, X, Link2, MessageCircle } from 'lucide-react';
 
 export function CustomerCreation() {
@@ -164,32 +164,19 @@ export function CustomerCreation() {
     }
   }
 
-  // O link do cliente vive numa tabela separada (customer_links) e é gerado
-  // sob demanda pelo banco. A tabela de clientes não muda.
-  async function fetchCustomerLink(customer: Customer): Promise<string | null> {
-    const { data, error } = await supabase.rpc('ensure_customer_link', { p_customer_id: customer.id });
-    if (error || !data) {
-      console.error(error);
-      setMessage({ type: 'err', text: 'Não foi possível gerar o link deste cliente.' });
-      return null;
-    }
-    return customerOrderLink(String(data));
-  }
-
-  async function copyLink(customer: Customer) {
+  // A loja dos clientes fica em outro endereço. O cliente entra com o próprio
+  // celular cadastrado aqui, então basta compartilhar o endereço da loja.
+  async function copyStoreLink(customer: Customer) {
     setMessage(null);
-    const link = await fetchCustomerLink(customer);
-    if (!link) return;
-
     try {
-      await navigator.clipboard.writeText(link);
-      setMessage({ type: 'ok', text: `Link de ${customer.name} copiado.` });
+      await navigator.clipboard.writeText(STORE_URL);
+      setMessage({ type: 'ok', text: `Endereço da loja copiado. ${customer.name} entra com o celular cadastrado.` });
     } catch {
-      window.prompt('Copie o link do cliente:', link);
+      window.prompt('Copie o endereço da loja:', STORE_URL);
     }
   }
 
-  async function sendLinkByWhatsApp(customer: Customer) {
+  function sendStoreLinkByWhatsApp(customer: Customer) {
     setMessage(null);
 
     const digits = phoneNorm(customer.phone || '');
@@ -198,27 +185,13 @@ export function CustomerCreation() {
       return;
     }
 
-    // Abre a janela antes da chamada ao banco para o navegador não bloquear o pop-up.
-    const popup = window.open('', '_blank', 'noopener,noreferrer');
-
-    const link = await fetchCustomerLink(customer);
-    if (!link) {
-      popup?.close();
-      return;
-    }
-
     const withCountry = digits.startsWith('55') && digits.length >= 12 ? digits : `55${digits}`;
     const text =
-      `Olá, ${customer.name}! Aqui está o seu link para fazer pedidos:\n` +
-      `${link}\n\n` +
-      `Guarde este link. Ele é só seu.`;
-    const url = `https://wa.me/${withCountry}?text=${encodeURIComponent(text)}`;
+      `Olá, ${customer.name}! Agora você pode fazer seus pedidos pela nossa loja online:\n` +
+      `${STORE_URL}\n\n` +
+      `Para entrar, informe este número de celular.`;
 
-    if (popup) {
-      popup.location.href = url;
-    } else {
-      window.prompt('Abra este endereço para enviar pelo WhatsApp:', url);
-    }
+    window.open(`https://wa.me/${withCountry}?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
   }
 
   if (loading) {
@@ -334,17 +307,17 @@ export function CustomerCreation() {
 
                 <div className="flex items-center gap-3 shrink-0">
                   <button
-                    onClick={() => copyLink(c)}
+                    onClick={() => copyStoreLink(c)}
                     className="text-slate-600 hover:text-blue-700 dark:text-slate-300 transition"
-                    title="Copiar link de pedidos do cliente"
+                    title="Copiar endereço da loja"
                   >
                     <Link2 className="w-5 h-5" />
                   </button>
 
                   <button
-                    onClick={() => sendLinkByWhatsApp(c)}
+                    onClick={() => sendStoreLinkByWhatsApp(c)}
                     className="text-emerald-600 hover:text-emerald-800 transition"
-                    title="Enviar link de pedidos pelo WhatsApp"
+                    title="Enviar endereço da loja pelo WhatsApp"
                   >
                     <MessageCircle className="w-5 h-5" />
                   </button>

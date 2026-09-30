@@ -1,27 +1,39 @@
-import { useState } from 'react';
-import { CustomerOrderPage } from './CustomerOrderPage';
-import { CustomerLanding } from './CustomerLanding';
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function readTokenFromLocation(): string | null {
-  const raw = new URLSearchParams(window.location.search).get('c');
-  if (!raw) return null;
-  const token = raw.trim().toLowerCase();
-  return UUID.test(token) ? token : null;
-}
+import { useEffect, useState } from 'react';
+import { StoreLogin } from './StoreLogin';
+import { StoreShell } from './StoreShell';
+import { clearStoreSession, getStoreSession, setStoreSession } from '../../lib/storeSession';
 
 /**
- * Raiz do endereço dos clientes. Não monta AuthProvider, ThemeProvider nem
- * qualquer tela da equipe. Só ?c=<código> abre a página de pedido; o resto
- * cai numa página neutra.
+ * Raiz do endereço dos clientes (loja). Não monta AuthProvider, ThemeProvider
+ * nem qualquer tela da equipe.
+ *
+ * Sem sessão: tela de entrada pelo celular. Com sessão: a loja.
  */
 export function CustomerApp() {
-  const [token] = useState<string | null>(readTokenFromLocation);
+  const [session, setSession] = useState<string | null>(getStoreSession);
 
-  if (!token) {
-    return <CustomerLanding />;
+  useEffect(() => {
+    document.title = 'Leleko - Loja';
+  }, []);
+
+  if (!session) {
+    return (
+      <StoreLogin
+        onLoggedIn={(token) => {
+          setStoreSession(token);
+          setSession(token);
+        }}
+      />
+    );
   }
 
-  return <CustomerOrderPage token={token} />;
+  return (
+    <StoreShell
+      session={session}
+      onLogout={() => {
+        clearStoreSession();
+        setSession(null);
+      }}
+    />
+  );
 }
