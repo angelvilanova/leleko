@@ -37,16 +37,7 @@ function AppContent() {
   );
 }
 
-// Tela branca temporária para teste com os funcionários.
-// Cobre login, admin e operador. Para restaurar o sistema, mude para false
-// (ou reverta o commit que introduziu esta constante) e publique.
-const TELA_BRANCA_TEMPORARIA = true;
-
 function App() {
-  if (TELA_BRANCA_TEMPORARIA) {
-    return <div className="min-h-screen bg-white" />;
-  }
-
   return (
     <ThemeProvider>
       <AuthProvider>
