@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { RepeatItem } from './StoreCatalog';
 import { describeError, formatBRL, isSessionExpired } from '../../lib/storeSession';
-import { ClipboardList, Loader2, AlertCircle, RefreshCw, RotateCcw, FileText, Package } from 'lucide-react';
+import { Card, Pill, orderStatusStyles, primaryButton, secondaryButton } from './ui';
+import { ClipboardList, Loader2, AlertCircle, RefreshCw, RotateCcw, FileText, Package, Truck } from 'lucide-react';
 
 type HistoryItem = {
   product_id?: string | null;
@@ -23,14 +24,6 @@ type HistoryEntry = {
   items: HistoryItem[];
 };
 
-const statusConfig: Record<string, { label: string; color: string; dot: string }> = {
-  awaiting_approval: { label: 'Aguardando aprovação', color: 'bg-purple-50 text-purple-700 border-purple-200', dot: 'bg-purple-500' },
-  rejected: { label: 'Não aprovado', color: 'bg-red-50 text-red-700 border-red-200', dot: 'bg-red-500' },
-  pending: { label: 'Na fila de entrega', color: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-500' },
-  dispatched: { label: 'Despachado', color: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
-  cancelled: { label: 'Cancelado', color: 'bg-red-50 text-red-700 border-red-200', dot: 'bg-red-500' },
-};
-
 const REFRESH_MS = 30_000;
 
 type Props = {
@@ -38,6 +31,10 @@ type Props = {
   onRepeat: (items: RepeatItem[]) => void;
   onSessionExpired: () => void;
 };
+
+function formatDate(value: string) {
+  return new Date(value).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+}
 
 /** Histórico do cliente: todos os pedidos, inclusive cancelados e não aprovados. */
 export function StoreOrders({ session, onRepeat, onSessionExpired }: Props) {
@@ -82,8 +79,8 @@ export function StoreOrders({ session, onRepeat, onSessionExpired }: Props) {
 
   if (loading) {
     return (
-      <div className="py-16 text-center">
-        <Loader2 className="w-10 h-10 text-blue-600 animate-spin mx-auto mb-3" />
+      <div className="py-20 text-center">
+        <Loader2 className="w-10 h-10 text-emerald-600 animate-spin mx-auto mb-3" />
         <p className="text-slate-500">Carregando seus pedidos...</p>
       </div>
     );
@@ -91,33 +88,32 @@ export function StoreOrders({ session, onRepeat, onSessionExpired }: Props) {
 
   if (error) {
     return (
-      <div className="py-16 text-center max-w-sm mx-auto">
-        <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+      <Card className="py-14 px-6 text-center max-w-md mx-auto">
+        <span className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center mx-auto mb-4">
+          <AlertCircle className="w-7 h-7" />
+        </span>
         <p className="text-slate-700">{error}</p>
-        {errorDetail && (
-          <p className="text-xs text-slate-400 mt-2 break-words">Detalhe técnico: {errorDetail}</p>
-        )}
-        <button
-          onClick={() => load(true)}
-          className="mt-5 bg-blue-600 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-blue-700 transition"
-        >
+        {errorDetail && <p className="text-xs text-slate-400 mt-2 break-words">Detalhe técnico: {errorDetail}</p>}
+        <button onClick={() => load(true)} className={`${primaryButton} mt-5 px-5 py-2.5 mx-auto`}>
           Tentar novamente
         </button>
-      </div>
+      </Card>
     );
   }
 
   return (
     <div className="max-w-2xl mx-auto space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-          <ClipboardList className="w-5 h-5 text-blue-600" />
-          Meus pedidos
-        </h2>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900">Meus pedidos</h2>
+          <p className="text-sm text-slate-500">
+            {entries.length === 0 ? 'Nenhum pedido ainda' : `${entries.length} ${entries.length === 1 ? 'pedido' : 'pedidos'}`}
+          </p>
+        </div>
         <button
           onClick={() => load(false)}
           disabled={refreshing}
-          className="text-sm text-slate-600 hover:text-blue-700 flex items-center gap-1.5 disabled:opacity-50"
+          className={`${secondaryButton} px-3.5 py-2 text-sm disabled:opacity-50`}
           title="Atualizar"
         >
           <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
@@ -126,57 +122,71 @@ export function StoreOrders({ session, onRepeat, onSessionExpired }: Props) {
       </div>
 
       {entries.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
-          <Package className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-600">Você ainda não fez nenhum pedido.</p>
-        </div>
+        <Card className="text-center py-16 px-6">
+          <span className="w-16 h-16 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-4">
+            <ClipboardList className="w-8 h-8" />
+          </span>
+          <p className="text-slate-700 font-medium">Você ainda não fez nenhum pedido.</p>
+          <p className="text-sm text-slate-500 mt-1">Seus pedidos e o andamento de cada um aparecem aqui.</p>
+        </Card>
       ) : (
         entries.map((entry) => {
-          const st = statusConfig[entry.status] || { label: entry.status, color: 'bg-slate-50 text-slate-700 border-slate-200', dot: 'bg-slate-400' };
+          const st = orderStatusStyles[entry.status] || {
+            label: entry.status,
+            className: 'bg-slate-100 text-slate-600 ring-slate-200',
+            dot: 'bg-slate-400',
+          };
           const items = Array.isArray(entry.items) ? entry.items : [];
           const repeatable = items.filter((i) => i.product_id);
 
           return (
-            <div key={`${entry.kind}-${entry.id}`} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
-              <div className="flex items-start justify-between gap-3 flex-wrap">
-                <div>
+            <Card key={`${entry.kind}-${entry.id}`} className="overflow-hidden">
+              <div className="px-5 pt-4 pb-3 flex items-start justify-between gap-3 flex-wrap">
+                <div className="min-w-0">
                   <p className="font-bold text-slate-900">{entry.number}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    {new Date(entry.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
-                    {entry.dispatched_at && (
-                      <> · Despachado em {new Date(entry.dispatched_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</>
-                    )}
-                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5">{formatDate(entry.created_at)}</p>
                 </div>
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${st.color}`}>
+                <Pill className={st.className}>
                   <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`}></span>
                   {st.label}
-                </span>
+                </Pill>
               </div>
 
-              <div className="space-y-1.5">
-                {items.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between text-sm">
-                    <span className="text-slate-700 min-w-0 truncate">
-                      <span className="font-semibold">{item.quantity}x</span> {item.name}
-                    </span>
-                    <span className="text-slate-900 font-medium shrink-0 ml-3">
-                      {formatBRL(Number(item.quantity) * Number(item.unit_price))}
-                    </span>
-                  </div>
-                ))}
+              <div className="px-5 pb-4 space-y-3">
+                <div className="space-y-1.5">
+                  {items.map((item, index) => (
+                    <div key={index} className="flex items-center justify-between text-sm gap-3">
+                      <span className="text-slate-700 min-w-0 truncate flex items-center gap-2">
+                        <span className="inline-flex items-center justify-center min-w-[1.75rem] px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-semibold">
+                          {item.quantity}x
+                        </span>
+                        <span className="truncate">{item.name}</span>
+                      </span>
+                      <span className="text-slate-900 font-medium shrink-0">
+                        {formatBRL(Number(item.quantity) * Number(item.unit_price))}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {entry.notes && (
+                  <p className="text-xs text-slate-600 bg-amber-50 ring-1 ring-amber-200 rounded-lg px-3 py-2 flex items-start gap-1.5">
+                    <FileText className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-600" />
+                    <span className="whitespace-pre-line">{entry.notes}</span>
+                  </p>
+                )}
+
+                {entry.dispatched_at && (
+                  <p className="text-xs text-emerald-700 flex items-center gap-1.5">
+                    <Truck className="w-3.5 h-3.5" />
+                    Despachado em {formatDate(entry.dispatched_at)}
+                  </p>
+                )}
               </div>
 
-              {entry.notes && (
-                <p className="text-xs text-slate-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-start gap-1.5">
-                  <FileText className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-600" />
-                  <span className="whitespace-pre-line">{entry.notes}</span>
-                </p>
-              )}
-
-              <div className="flex items-center justify-between pt-3 border-t border-slate-100 gap-3">
+              <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3">
                 <span className="font-bold text-slate-900">{formatBRL(Number(entry.total))}</span>
-                {repeatable.length > 0 && (
+                {repeatable.length > 0 ? (
                   <button
                     onClick={() =>
                       onRepeat(
@@ -187,14 +197,19 @@ export function StoreOrders({ session, onRepeat, onSessionExpired }: Props) {
                         }))
                       )
                     }
-                    className="text-sm text-blue-700 hover:bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition"
+                    className="text-sm font-medium text-emerald-700 hover:bg-emerald-50 ring-1 ring-emerald-200 bg-white px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition"
                   >
                     <RotateCcw className="w-4 h-4" />
                     Repetir pedido
                   </button>
+                ) : (
+                  <span className="text-xs text-slate-400 flex items-center gap-1">
+                    <Package className="w-3.5 h-3.5" />
+                    {items.length} {items.length === 1 ? 'item' : 'itens'}
+                  </span>
                 )}
               </div>
-            </div>
+            </Card>
           );
         })
       )}
