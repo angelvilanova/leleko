@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { Check, Edit3, Trash2, X, Plus, Minus, Package, User, CalendarDays, ArrowUpDown, FileText, Printer, Truck, Users } from 'lucide-react';
+import { Check, Edit3, Trash2, X, Plus, Minus, Package, User, CalendarDays, ArrowUpDown, FileText, Printer, Truck, Users, Link2 } from 'lucide-react';
+import { CustomerOrderRequests } from './CustomerOrderRequests';
 
 type Product = {
   id: string;
@@ -145,6 +146,9 @@ export function OrderManagement() {
   const [sortAsc, setSortAsc] = useState(false);
   const [dispatchFrom, setDispatchFrom] = useState('');
   const [dispatchTo, setDispatchTo] = useState('');
+
+  // Pedidos que nasceram no link do cliente e já foram aprovados (só para o selo).
+  const [linkOrderIds, setLinkOrderIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     (async () => {
@@ -322,6 +326,22 @@ export function OrderManagement() {
     }
 
     setOrders((data || []) as OrderRow[]);
+
+    // Marca quais pedidos vieram do link do cliente. Vive numa tabela separada;
+    // se ela ainda não existir, a lista de pedidos segue normalmente.
+    const { data: linked } = await supabase
+      .from('customer_order_requests')
+      .select('order_id')
+      .eq('status', 'approved')
+      .not('order_id', 'is', null);
+
+    setLinkOrderIds(
+      new Set(
+        ((linked || []) as { order_id: string | null }[])
+          .map((r) => r.order_id)
+          .filter((id): id is string => Boolean(id))
+      )
+    );
   }
 
   function applyQuickRange(range: 'today' | 'yesterday' | 'month') {
@@ -928,6 +948,12 @@ export function OrderManagement() {
         </div>
       </div>
 
+      <CustomerOrderRequests
+        onDecided={async () => {
+          await Promise.all([loadOrders(), loadProducts()]);
+        }}
+      />
+
       {filteredOrders.length === 0 ? (
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm p-8 text-center text-gray-600 dark:text-slate-400">
           Nenhum pedido encontrado.
@@ -973,6 +999,16 @@ export function OrderManagement() {
                         <span className={`text-xs px-3 py-1 rounded-full border ${statusClasses[order.status]}`}>
                           Status: <span className="font-semibold">{statusLabel[order.status]}</span>
                         </span>
+
+                        {linkOrderIds.has(order.id) && (
+                          <span
+                            className="text-xs px-3 py-1 rounded-full border bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800 flex items-center gap-1"
+                            title="Feito pelo cliente no link próprio e aprovado"
+                          >
+                            <Link2 className="w-3 h-3" />
+                            Pedido pelo link
+                          </span>
+                        )}
                       </div>
                     </button>
 

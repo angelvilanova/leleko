@@ -3,6 +3,8 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { Login } from './components/Login';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { OperatorDashboard } from './components/operator/OperatorDashboard';
+import { CustomerApp } from './components/customer/CustomerApp';
+import { APP_SURFACE } from './lib/surface';
 
 function AppContent() {
   const { user, profile, loading } = useAuth();
@@ -38,6 +40,11 @@ function AppContent() {
 }
 
 function App() {
+  // Endereço dos clientes: só a página de pedido, sem login nem painel.
+  if (APP_SURFACE === 'customer') {
+    return <CustomerApp />;
+  }
+
   return (
     <ThemeProvider>
       <AuthProvider>

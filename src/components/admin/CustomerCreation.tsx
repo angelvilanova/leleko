@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Customer } from '../../types/database';
-import { Users, Plus, Trash2, Search, Edit2, X } from 'lucide-react';
+import { customerOrderLink } from '../../lib/surface';
+import { Plus, Trash2, Search, Edit2, X, Link2, MessageCircle } from 'lucide-react';
 
 export function CustomerCreation() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -163,6 +164,63 @@ export function CustomerCreation() {
     }
   }
 
+  // O link do cliente vive numa tabela separada (customer_links) e é gerado
+  // sob demanda pelo banco. A tabela de clientes não muda.
+  async function fetchCustomerLink(customer: Customer): Promise<string | null> {
+    const { data, error } = await supabase.rpc('ensure_customer_link', { p_customer_id: customer.id });
+    if (error || !data) {
+      console.error(error);
+      setMessage({ type: 'err', text: 'Não foi possível gerar o link deste cliente.' });
+      return null;
+    }
+    return customerOrderLink(String(data));
+  }
+
+  async function copyLink(customer: Customer) {
+    setMessage(null);
+    const link = await fetchCustomerLink(customer);
+    if (!link) return;
+
+    try {
+      await navigator.clipboard.writeText(link);
+      setMessage({ type: 'ok', text: `Link de ${customer.name} copiado.` });
+    } catch {
+      window.prompt('Copie o link do cliente:', link);
+    }
+  }
+
+  async function sendLinkByWhatsApp(customer: Customer) {
+    setMessage(null);
+
+    const digits = phoneNorm(customer.phone || '');
+    if (!digits) {
+      setMessage({ type: 'err', text: 'Este cliente não tem telefone cadastrado.' });
+      return;
+    }
+
+    // Abre a janela antes da chamada ao banco para o navegador não bloquear o pop-up.
+    const popup = window.open('', '_blank', 'noopener,noreferrer');
+
+    const link = await fetchCustomerLink(customer);
+    if (!link) {
+      popup?.close();
+      return;
+    }
+
+    const withCountry = digits.startsWith('55') && digits.length >= 12 ? digits : `55${digits}`;
+    const text =
+      `Olá, ${customer.name}! Aqui está o seu link para fazer pedidos:\n` +
+      `${link}\n\n` +
+      `Guarde este link. Ele é só seu.`;
+    const url = `https://wa.me/${withCountry}?text=${encodeURIComponent(text)}`;
+
+    if (popup) {
+      popup.location.href = url;
+    } else {
+      window.prompt('Abra este endereço para enviar pelo WhatsApp:', url);
+    }
+  }
+
   if (loading) {
     return <div className="text-center py-8">Carregando clientes...</div>;
   }
@@ -274,7 +332,23 @@ export function CustomerCreation() {
                   <p className="text-sm text-gray-700 dark:text-slate-300">Endereço: {c.address}</p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 shrink-0">
+                  <button
+                    onClick={() => copyLink(c)}
+                    className="text-slate-600 hover:text-blue-700 dark:text-slate-300 transition"
+                    title="Copiar link de pedidos do cliente"
+                  >
+                    <Link2 className="w-5 h-5" />
+                  </button>
+
+                  <button
+                    onClick={() => sendLinkByWhatsApp(c)}
+                    className="text-emerald-600 hover:text-emerald-800 transition"
+                    title="Enviar link de pedidos pelo WhatsApp"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                  </button>
+
                   <button
                     onClick={() => handleEdit(c)}
                     className="text-blue-600 hover:text-blue-800 transition"
