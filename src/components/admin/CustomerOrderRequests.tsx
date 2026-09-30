@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Clock, CheckCircle2, XCircle, User, FileText, Link2, Package } from 'lucide-react';
+import { Clock, CheckCircle2, XCircle, User, FileText, Link2, Package, QrCode, Banknote, MapPin } from 'lucide-react';
 
 type RequestItem = {
   product_id: string;
@@ -23,6 +23,8 @@ type OrderRequest = {
   notes: string;
   status: string;
   created_at: string;
+  payment_method?: 'on_delivery' | 'pix' | null;
+  address_changed?: boolean | null;
 };
 
 const AUTO_APPROVE_MINUTES = 5;
@@ -160,8 +162,19 @@ export function CustomerOrderRequests({ onDecided }: { onDecided: () => void | P
                 <span className="text-lg font-bold text-gray-900 dark:text-white">{req.request_number}</span>
                 <span className="text-xs px-2.5 py-1 rounded-full border bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800 flex items-center gap-1">
                   <Link2 className="w-3 h-3" />
-                  Pedido pelo link
+                  Pedido pela loja
                 </span>
+                {req.payment_method === 'pix' ? (
+                  <span className="text-xs px-2.5 py-1 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800 flex items-center gap-1">
+                    <QrCode className="w-3 h-3" />
+                    Pagamento: Pix
+                  </span>
+                ) : (
+                  <span className="text-xs px-2.5 py-1 rounded-full border bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600 flex items-center gap-1">
+                    <Banknote className="w-3 h-3" />
+                    Pagamento na entrega
+                  </span>
+                )}
                 <span className="text-xs text-gray-500 dark:text-slate-400">
                   há {elapsedMin < 1 ? 'menos de 1 min' : `${elapsedMin} min`}
                   {' · '}
@@ -178,7 +191,16 @@ export function CustomerOrderRequests({ onDecided }: { onDecided: () => void | P
                 <div className="text-blue-900 dark:text-blue-200 space-y-1">
                   <div><span className="font-semibold">Nome:</span> {req.customer_name}</div>
                   <div><span className="font-semibold">Telefone:</span> {formatPhone(req.customer_phone)}</div>
-                  <div><span className="font-semibold">Endereço:</span> {req.customer_address || 'Não informado'}</div>
+                  <div>
+                    <span className="font-semibold">{req.address_changed ? 'Entregar em:' : 'Endereço:'}</span>{' '}
+                    {req.customer_address || 'Não informado'}
+                  </div>
+                  {req.address_changed && (
+                    <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-2 py-1 inline-flex items-center gap-1 mt-1">
+                      <MapPin className="w-3 h-3" />
+                      Endereço informado no pedido, diferente do cadastro
+                    </div>
+                  )}
                 </div>
               </div>
 

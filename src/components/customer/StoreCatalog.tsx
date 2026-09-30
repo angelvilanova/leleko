@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { StoreCustomer } from './StoreShell';
-import { describeError, formatBRL, friendlyError, isSessionExpired } from '../../lib/storeSession';
+import { describeError, formatBRL, formatPhoneBR, friendlyError, isSessionExpired } from '../../lib/storeSession';
 import {
   ShoppingCart,
   Plus,
@@ -15,6 +15,10 @@ import {
   Loader2,
   Banknote,
   ClipboardList,
+  QrCode,
+  Copy,
+  Check,
+  MessageCircle,
 } from 'lucide-react';
 
 type PublicProduct = {
@@ -31,10 +35,22 @@ export type RepeatItem = {
   quantity: number;
 };
 
+type PaymentMethod = 'on_delivery' | 'pix';
+type AddressMode = 'registered' | 'custom';
+
+type StoreSettings = {
+  pix_key: string;
+  pix_receiver: string;
+  pix_instructions: string;
+  whatsapp: string;
+};
+
 type PlacedOrder = {
   number: string;
   items: { name: string; quantity: number; unit_price: number }[];
   total: number;
+  address: string;
+  payment: PaymentMethod;
 };
 
 type Props = {
@@ -46,28 +62,50 @@ type Props = {
   onSessionExpired: () => void;
 };
 
+const EMPTY_SETTINGS: StoreSettings = { pix_key: '', pix_receiver: '', pix_instructions: '', whatsapp: '' };
+
+function joinAddress(parts: { street: string; complement: string; neighborhood: string; city: string; reference: string }) {
+  const main = [parts.street.trim(), parts.complement.trim()].filter(Boolean).join(', ');
+  const area = [parts.neighborhood.trim(), parts.city.trim()].filter(Boolean).join(' - ');
+  const ref = parts.reference.trim() ? `Ref.: ${parts.reference.trim()}` : '';
+  return [main, area, ref].filter(Boolean).join(' · ');
+}
+
 /**
- * Vitrine: produtos ativos com estoque, só preço de venda. Carrinho,
- * observação, pagamento na entrega. O envio cai em "Aguardando aprovação"
- * no painel.
+ * Vitrine e checkout. Produtos ativos com estoque, só preço de venda.
+ * No checkout o cliente escolhe o endereço de entrega, cadastrado ou outro
+ * completo, e a forma de pagamento, Pix ou na entrega. O envio cai em
+ * "Aguardando aprovação" no painel.
  */
 export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed, onViewOrders, onSessionExpired }: Props) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadErrorDetail, setLoadErrorDetail] = useState<string | null>(null);
   const [products, setProducts] = useState<PublicProduct[]>([]);
+  const [settings, setSettings] = useState<StoreSettings>(EMPTY_SETTINGS);
 
   const [cart, setCart] = useState<Record<string, number>>({});
   const [query, setQuery] = useState('');
   const [notes, setNotes] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
 
+  const registeredAddress = (customer.address || '').trim();
+  const [addressMode, setAddressMode] = useState<AddressMode>(registeredAddress ? 'registered' : 'custom');
+  const [street, setStreet] = useState('');
+  const [complement, setComplement] = useState('');
+  const [neighborhood, setNeighborhood] = useState('');
+  const [city, setCity] = useState('');
+  const [reference, setReference] = useState('');
+  const [payment, setPayment] = useState<PaymentMethod>('on_delivery');
+
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [placedOrder, setPlacedOrder] = useState<PlacedOrder | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     loadProducts(true);
+    loadSettings();
   }, []);
 
   // "Repetir pedido" vindo do histórico: remonta o carrinho com o que ainda existe.
@@ -118,6 +156,16 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
     }
   }
 
+  async function loadSettings() {
+    const { data, error } = await supabase.rpc('store_public_settings');
+    if (error) {
+      console.warn('store_public_settings:', error.message);
+      return;
+    }
+    const row = Array.isArray(data) ? data[0] : data;
+    if (row) setSettings({ ...EMPTY_SETTINGS, ...(row as Partial<StoreSettings>) });
+  }
+
   const filteredProducts = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return products;
@@ -137,6 +185,14 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const totalValue = cartItems.reduce((sum, item) => sum + item.quantity * item.product.price, 0);
 
+  const customAddress = joinAddress({ street, complement, neighborhood, city, reference });
+  const customAddressValid = street.trim().length > 0 && neighborhood.trim().length > 0 && city.trim().length > 0;
+  const deliveryAddress = addressMode === 'registered' ? registeredAddress : customAddress;
+  const addressValid = addressMode === 'registered' ? registeredAddress.length > 0 : customAddressValid;
+
+  const pixConfigured = settings.pix_key.trim().length > 0;
+  const storeWhatsapp = settings.whatsapp.replace(/\D/g, '');
+
   function setQuantity(product: PublicProduct, next: number) {
     const clamped = Math.max(0, Math.min(next, product.stock_quantity));
     setSubmitError(null);
@@ -152,6 +208,15 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
   async function submitOrder() {
     if (cartItems.length === 0 || submitting) return;
 
+    if (!addressValid) {
+      setSubmitError(
+        addressMode === 'custom'
+          ? 'Preencha rua e número, bairro e cidade do endereço de entrega.'
+          : 'Você não tem endereço cadastrado. Informe o endereço de entrega.'
+      );
+      return;
+    }
+
     setSubmitting(true);
     setSubmitError(null);
 
@@ -160,6 +225,8 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
         p_session: session,
         p_items: cartItems.map((item) => ({ product_id: item.product.id, quantity: item.quantity })),
         p_notes: notes.trim(),
+        p_payment_method: payment,
+        p_delivery_address: addressMode === 'custom' ? customAddress : null,
       });
 
       if (error) throw error;
@@ -174,11 +241,14 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
           unit_price: item.product.price,
         })),
         total: totalValue,
+        address: deliveryAddress,
+        payment,
       });
       setCart({});
       setNotes('');
       setQuery('');
       setNotice(null);
+      setCopied(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       loadProducts();
     } catch (e) {
@@ -191,6 +261,16 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
       loadProducts();
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function copyPixKey() {
+    try {
+      await navigator.clipboard.writeText(settings.pix_key.trim());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      window.prompt('Copie a chave Pix:', settings.pix_key.trim());
     }
   }
 
@@ -222,8 +302,13 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
   }
 
   if (placedOrder) {
+    const isPix = placedOrder.payment === 'pix';
+    const whatsappText = encodeURIComponent(
+      `Olá! Segue o comprovante do Pix do pedido ${placedOrder.number} (${formatBRL(placedOrder.total)}).`
+    );
+
     return (
-      <div className="max-w-lg mx-auto">
+      <div className="max-w-lg mx-auto space-y-4">
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-center">
           <CheckCircle2 className="w-14 h-14 text-emerald-500 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-slate-900">Pedido enviado!</h2>
@@ -245,45 +330,96 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
               <span className="font-semibold text-slate-900">Total</span>
               <span className="font-bold text-lg text-slate-900">{formatBRL(placedOrder.total)}</span>
             </div>
-            <p className="text-xs text-slate-500 pt-1 flex items-center gap-1.5">
-              <Banknote className="w-4 h-4" />
-              Pagamento na entrega
+            <p className="text-xs text-slate-500 pt-1 flex items-start gap-1.5">
+              <MapPin className="w-4 h-4 shrink-0" />
+              <span>Entrega em: {placedOrder.address}</span>
+            </p>
+            <p className="text-xs text-slate-500 flex items-center gap-1.5">
+              {isPix ? <QrCode className="w-4 h-4" /> : <Banknote className="w-4 h-4" />}
+              {isPix ? 'Pagamento por Pix' : 'Pagamento na entrega'}
             </p>
           </div>
+        </div>
 
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <button
-              onClick={onViewOrders}
-              className="w-full border border-slate-300 text-slate-700 py-3 rounded-xl font-semibold hover:bg-slate-50 transition flex items-center justify-center gap-2"
-            >
-              <ClipboardList className="w-5 h-5" />
-              Ver meus pedidos
-            </button>
-            <button
-              onClick={() => setPlacedOrder(null)}
-              className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition"
-            >
-              Fazer outro pedido
-            </button>
+        {isPix && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 space-y-3">
+            <div className="flex items-center gap-2 text-emerald-900 font-semibold">
+              <QrCode className="w-5 h-5" />
+              Pagamento por Pix
+            </div>
+
+            {pixConfigured ? (
+              <>
+                <div className="bg-white rounded-xl border border-emerald-200 p-3">
+                  <p className="text-xs text-slate-500">Chave Pix</p>
+                  <div className="flex items-center justify-between gap-2 mt-1">
+                    <p className="font-mono text-slate-900 break-all">{settings.pix_key.trim()}</p>
+                    <button
+                      onClick={copyPixKey}
+                      className="shrink-0 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition"
+                    >
+                      {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      {copied ? 'Copiada' : 'Copiar'}
+                    </button>
+                  </div>
+                  {settings.pix_receiver.trim() && (
+                    <p className="text-xs text-slate-600 mt-2">
+                      Recebedor: <span className="font-medium">{settings.pix_receiver.trim()}</span>
+                    </p>
+                  )}
+                  <p className="text-xs text-slate-600 mt-1">
+                    Valor: <span className="font-semibold">{formatBRL(placedOrder.total)}</span>
+                  </p>
+                </div>
+                {settings.pix_instructions.trim() && (
+                  <p className="text-sm text-emerald-900">{settings.pix_instructions.trim()}</p>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-emerald-900">
+                A chave Pix será enviada pelo WhatsApp da loja junto com a confirmação do pedido.
+              </p>
+            )}
+
+            {storeWhatsapp && (
+              <a
+                href={`https://wa.me/${storeWhatsapp.startsWith('55') && storeWhatsapp.length >= 12 ? storeWhatsapp : `55${storeWhatsapp}`}?text=${whatsappText}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full bg-emerald-600 text-white py-3 rounded-xl font-semibold hover:bg-emerald-700 transition flex items-center justify-center gap-2"
+              >
+                <MessageCircle className="w-5 h-5" />
+                Enviar comprovante pelo WhatsApp
+              </a>
+            )}
           </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <button
+            onClick={onViewOrders}
+            className="w-full border border-slate-300 text-slate-700 py-3 rounded-xl font-semibold hover:bg-slate-50 transition flex items-center justify-center gap-2 bg-white"
+          >
+            <ClipboardList className="w-5 h-5" />
+            Ver meus pedidos
+          </button>
+          <button
+            onClick={() => setPlacedOrder(null)}
+            className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition"
+          >
+            Fazer outro pedido
+          </button>
         </div>
       </div>
     );
   }
 
+  const fieldClass =
+    'w-full border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent';
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <section className="lg:col-span-2 space-y-4">
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-          <p className="text-sm text-slate-600 flex items-start gap-2">
-            <MapPin className="w-4 h-4 mt-0.5 text-blue-600 shrink-0" />
-            <span>
-              Entrega em: <span className="font-medium text-slate-800">{customer.address || 'endereço não informado'}</span>
-            </span>
-          </p>
-          <p className="text-xs text-slate-500 mt-2">Se o endereço mudou, avise na observação do pedido.</p>
-        </div>
-
         {notice && (
           <div className="bg-blue-50 border border-blue-200 text-blue-800 px-3 py-2 rounded-xl text-sm">{notice}</div>
         )}
@@ -380,7 +516,148 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
                 ))}
               </div>
 
-              <div className="border-t border-slate-100 pt-4 space-y-4">
+              <div className="border-t border-slate-100 pt-4 space-y-5">
+                {/* Endereço de entrega */}
+                <div>
+                  <p className="flex items-center gap-1.5 text-sm font-medium text-slate-800 mb-2">
+                    <MapPin className="w-4 h-4 text-blue-600" />
+                    Endereço de entrega
+                  </p>
+
+                  <div className="space-y-2">
+                    {registeredAddress && (
+                      <label
+                        className={`flex items-start gap-2 p-3 rounded-xl border cursor-pointer transition ${
+                          addressMode === 'registered' ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="address-mode"
+                          checked={addressMode === 'registered'}
+                          onChange={() => {
+                            setAddressMode('registered');
+                            setSubmitError(null);
+                          }}
+                          className="mt-1"
+                        />
+                        <span className="text-sm">
+                          <span className="font-medium text-slate-900">Meu endereço cadastrado</span>
+                          <span className="block text-slate-600 mt-0.5">{registeredAddress}</span>
+                        </span>
+                      </label>
+                    )}
+
+                    <label
+                      className={`flex items-start gap-2 p-3 rounded-xl border cursor-pointer transition ${
+                        addressMode === 'custom' ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="address-mode"
+                        checked={addressMode === 'custom'}
+                        onChange={() => {
+                          setAddressMode('custom');
+                          setSubmitError(null);
+                        }}
+                        className="mt-1"
+                      />
+                      <span className="text-sm font-medium text-slate-900">
+                        {registeredAddress ? 'Entregar em outro endereço' : 'Informar endereço de entrega'}
+                      </span>
+                    </label>
+                  </div>
+
+                  {addressMode === 'custom' && (
+                    <div className="mt-3 space-y-2">
+                      <input
+                        value={street}
+                        onChange={(e) => setStreet(e.target.value)}
+                        placeholder="Rua e número *"
+                        className={fieldClass}
+                        autoComplete="street-address"
+                      />
+                      <input
+                        value={complement}
+                        onChange={(e) => setComplement(e.target.value)}
+                        placeholder="Complemento (apto, bloco, casa)"
+                        className={fieldClass}
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          value={neighborhood}
+                          onChange={(e) => setNeighborhood(e.target.value)}
+                          placeholder="Bairro *"
+                          className={fieldClass}
+                        />
+                        <input
+                          value={city}
+                          onChange={(e) => setCity(e.target.value)}
+                          placeholder="Cidade *"
+                          className={fieldClass}
+                          autoComplete="address-level2"
+                        />
+                      </div>
+                      <input
+                        value={reference}
+                        onChange={(e) => setReference(e.target.value)}
+                        placeholder="Ponto de referência"
+                        className={fieldClass}
+                      />
+                      <p className="text-xs text-slate-500">* obrigatório</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Forma de pagamento */}
+                <div>
+                  <p className="flex items-center gap-1.5 text-sm font-medium text-slate-800 mb-2">
+                    <Banknote className="w-4 h-4 text-emerald-600" />
+                    Forma de pagamento
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label
+                      className={`flex flex-col items-center gap-1 p-3 rounded-xl border cursor-pointer text-sm transition ${
+                        payment === 'pix' ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="payment"
+                        className="sr-only"
+                        checked={payment === 'pix'}
+                        onChange={() => setPayment('pix')}
+                      />
+                      <QrCode className={`w-5 h-5 ${payment === 'pix' ? 'text-emerald-700' : 'text-slate-500'}`} />
+                      <span className="font-medium text-slate-900">Pix</span>
+                    </label>
+                    <label
+                      className={`flex flex-col items-center gap-1 p-3 rounded-xl border cursor-pointer text-sm transition ${
+                        payment === 'on_delivery' ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="payment"
+                        className="sr-only"
+                        checked={payment === 'on_delivery'}
+                        onChange={() => setPayment('on_delivery')}
+                      />
+                      <Banknote className={`w-5 h-5 ${payment === 'on_delivery' ? 'text-emerald-700' : 'text-slate-500'}`} />
+                      <span className="font-medium text-slate-900">Na entrega</span>
+                    </label>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-2">
+                    {payment === 'pix'
+                      ? pixConfigured
+                        ? 'A chave Pix aparece depois de enviar o pedido.'
+                        : 'A chave Pix será enviada pelo WhatsApp da loja.'
+                      : 'Dinheiro ou cartão no momento da entrega.'}
+                  </p>
+                </div>
+
+                {/* Observação */}
                 <div>
                   <label className="flex items-center gap-1.5 text-sm text-slate-700 mb-1">
                     <FileText className="w-4 h-4" />
@@ -391,14 +668,9 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
                     onChange={(e) => setNotes(e.target.value)}
                     maxLength={500}
                     rows={3}
-                    placeholder="Ex: entregar a partir das 14h, ligar antes, sem troco..."
+                    placeholder="Ex: entregar a partir das 14h, ligar antes, troco para R$ 50..."
                     className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
-                </div>
-
-                <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 rounded-xl px-3 py-2">
-                  <Banknote className="w-4 h-4 text-emerald-600" />
-                  Pagamento na entrega
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -432,6 +704,10 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
                     </>
                   )}
                 </button>
+
+                <p className="text-[11px] text-slate-400 text-center">
+                  Contato cadastrado: {formatPhoneBR(customer.phone) || 'não informado'}
+                </p>
               </div>
             </>
           )}
