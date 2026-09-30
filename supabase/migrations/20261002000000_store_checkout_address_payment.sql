@@ -44,21 +44,31 @@ CREATE POLICY "Admins gerenciam configuracoes da loja"
 INSERT INTO public.store_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
 
 -- ===========================================================================
--- CONFIGURE AQUI antes de rodar (pode deixar vazio e preencher depois em
--- Table Editor > store_settings). Com a chave vazia, a loja avisa que a
--- chave Pix será enviada pelo WhatsApp.
+-- CONFIGURE AQUI: troque só os quatro valores entre aspas abaixo.
+-- Se deixar os textos de exemplo, nada é gravado e a loja avisa que a chave
+-- Pix será enviada pelo WhatsApp. Dá para preencher depois em
+-- Table Editor > store_settings, sem rodar SQL de novo.
 -- ===========================================================================
-UPDATE public.store_settings
-SET pix_key          = 'COLOQUE_AQUI_A_CHAVE_PIX',
-    pix_receiver     = 'COLOQUE_AQUI_O_NOME_DO_RECEBEDOR',
-    pix_instructions = 'Após pagar, envie o comprovante pelo WhatsApp da loja.',
-    whatsapp         = 'COLOQUE_AQUI_O_WHATSAPP_DA_LOJA_COM_DDD',
-    updated_at       = now()
-WHERE id = 1
-  AND pix_key = ''
-  AND 'COLOQUE_AQUI_A_CHAVE_PIX' NOT LIKE 'COLOQUE_AQUI%';
--- A última condição impede gravar os textos de exemplo caso o bloco seja
--- executado sem edição. Troque os quatro valores e a linha passa a gravar.
+DO $$
+DECLARE
+  v_pix_key          text := 'COLOQUE_AQUI_A_CHAVE_PIX';
+  v_pix_receiver     text := 'COLOQUE_AQUI_O_NOME_DO_RECEBEDOR';
+  v_pix_instructions text := 'Após pagar, envie o comprovante pelo WhatsApp da loja.';
+  v_whatsapp         text := 'COLOQUE_AQUI_O_WHATSAPP_DA_LOJA_COM_DDD';
+BEGIN
+  IF v_pix_key LIKE 'COLOQUE_AQUI%' THEN
+    RAISE NOTICE 'Chave Pix não configurada. Preencha depois em Table Editor > store_settings.';
+  ELSE
+    UPDATE public.store_settings
+    SET pix_key          = v_pix_key,
+        pix_receiver     = CASE WHEN v_pix_receiver LIKE 'COLOQUE_AQUI%' THEN '' ELSE v_pix_receiver END,
+        pix_instructions = v_pix_instructions,
+        whatsapp         = CASE WHEN v_whatsapp LIKE 'COLOQUE_AQUI%' THEN '' ELSE regexp_replace(v_whatsapp, '\D', '', 'g') END,
+        updated_at       = now()
+    WHERE id = 1;
+    RAISE NOTICE 'Configurações da loja gravadas.';
+  END IF;
+END $$;
 
 -- ---------------------------------------------------------------------------
 -- 2. Pedidos aguardando: o cliente informou outro endereço?
