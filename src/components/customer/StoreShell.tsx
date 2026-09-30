@@ -4,6 +4,7 @@ import { StoreCatalog, type RepeatItem } from './StoreCatalog';
 import { StoreOrders } from './StoreOrders';
 import { StoreProfile } from './StoreProfile';
 import { isSessionExpired } from '../../lib/storeSession';
+import { storeDisplayName, useStoreSettings } from '../../lib/storeSettings';
 import { ShoppingBag, Store, ClipboardList, User, LogOut, Loader2 } from 'lucide-react';
 
 export type StoreCustomer = {
@@ -21,6 +22,13 @@ export function StoreShell({ session, onLogout }: { session: string; onLogout: (
   const [loadError, setLoadError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('loja');
   const [repeatItems, setRepeatItems] = useState<RepeatItem[] | null>(null);
+
+  const settings = useStoreSettings();
+  const storeName = storeDisplayName(settings);
+
+  useEffect(() => {
+    document.title = storeName;
+  }, [storeName]);
 
   useEffect(() => {
     let cancelled = false;
@@ -109,7 +117,7 @@ export function StoreShell({ session, onLogout }: { session: string; onLogout: (
               <ShoppingBag className="w-4 h-4 text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-base font-bold text-slate-900 leading-tight">Leleko</h1>
+              <h1 className="text-base font-bold text-slate-900 leading-tight">{storeName}</h1>
               <p className="text-[11px] text-slate-500 leading-tight truncate">Olá, {customer.name}</p>
             </div>
           </div>

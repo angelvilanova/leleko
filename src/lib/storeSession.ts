@@ -3,7 +3,7 @@
  * O token corresponde a uma linha em customer_sessions; o banco valida e
  * renova o prazo a cada uso.
  */
-const KEY = 'leleko-store-session';
+const KEY = 'portal-store-session';
 
 export function getStoreSession(): string | null {
   try {

@@ -25,6 +25,7 @@
 
 CREATE TABLE IF NOT EXISTS public.store_settings (
   id               smallint PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  store_name       text NOT NULL DEFAULT '',
   pix_key          text NOT NULL DEFAULT '',
   pix_receiver     text NOT NULL DEFAULT '',
   pix_instructions text NOT NULL DEFAULT '',
@@ -41,21 +42,30 @@ CREATE POLICY "Admins gerenciam configuracoes da loja"
   USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin'))
   WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin'));
 
+-- Caso a tabela já exista de uma execução anterior sem esta coluna.
+ALTER TABLE public.store_settings ADD COLUMN IF NOT EXISTS store_name text NOT NULL DEFAULT '';
+
 INSERT INTO public.store_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
 
 -- ===========================================================================
--- CONFIGURE AQUI: troque só os quatro valores entre aspas abaixo.
--- Se deixar os textos de exemplo, nada é gravado e a loja avisa que a chave
--- Pix será enviada pelo WhatsApp. Dá para preencher depois em
--- Table Editor > store_settings, sem rodar SQL de novo.
+-- CONFIGURE AQUI: troque só os cinco valores entre aspas abaixo.
+-- Se deixar os textos de exemplo, nada é gravado: o portal mostra "Loja
+-- online" como nome e avisa que a chave Pix será enviada pelo WhatsApp.
+-- Dá para preencher depois em Table Editor > store_settings, sem rodar SQL.
 -- ===========================================================================
 DO $$
 DECLARE
+  v_store_name       text := 'COLOQUE_AQUI_O_NOME_DA_LOJA';
   v_pix_key          text := 'COLOQUE_AQUI_A_CHAVE_PIX';
   v_pix_receiver     text := 'COLOQUE_AQUI_O_NOME_DO_RECEBEDOR';
   v_pix_instructions text := 'Após pagar, envie o comprovante pelo WhatsApp da loja.';
   v_whatsapp         text := 'COLOQUE_AQUI_O_WHATSAPP_DA_LOJA_COM_DDD';
 BEGIN
+  IF v_store_name NOT LIKE 'COLOQUE_AQUI%' THEN
+    UPDATE public.store_settings SET store_name = trim(v_store_name), updated_at = now() WHERE id = 1;
+    RAISE NOTICE 'Nome da loja gravado.';
+  END IF;
+
   IF v_pix_key LIKE 'COLOQUE_AQUI%' THEN
     RAISE NOTICE 'Chave Pix não configurada. Preencha depois em Table Editor > store_settings.';
   ELSE
@@ -81,14 +91,17 @@ ALTER TABLE public.customer_order_requests
 -- 3. Funções
 -- ---------------------------------------------------------------------------
 
+-- A assinatura de retorno muda se já existir uma versão anterior.
+DROP FUNCTION IF EXISTS public.store_public_settings();
+
 CREATE OR REPLACE FUNCTION public.store_public_settings()
-RETURNS TABLE (pix_key text, pix_receiver text, pix_instructions text, whatsapp text)
+RETURNS TABLE (store_name text, pix_key text, pix_receiver text, pix_instructions text, whatsapp text)
 LANGUAGE sql
 SECURITY DEFINER
 STABLE
 SET search_path = public
 AS $$
-  SELECT s.pix_key, s.pix_receiver, s.pix_instructions, s.whatsapp
+  SELECT s.store_name, s.pix_key, s.pix_receiver, s.pix_instructions, s.whatsapp
   FROM store_settings s
   WHERE s.id = 1;
 $$;

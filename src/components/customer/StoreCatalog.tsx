@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { StoreCustomer } from './StoreShell';
 import { describeError, formatBRL, formatPhoneBR, friendlyError, isSessionExpired } from '../../lib/storeSession';
+import { useStoreSettings } from '../../lib/storeSettings';
 import {
   ShoppingCart,
   Plus,
@@ -38,13 +39,6 @@ export type RepeatItem = {
 type PaymentMethod = 'on_delivery' | 'pix';
 type AddressMode = 'registered' | 'custom';
 
-type StoreSettings = {
-  pix_key: string;
-  pix_receiver: string;
-  pix_instructions: string;
-  whatsapp: string;
-};
-
 type PlacedOrder = {
   number: string;
   items: { name: string; quantity: number; unit_price: number }[];
@@ -61,8 +55,6 @@ type Props = {
   onViewOrders: () => void;
   onSessionExpired: () => void;
 };
-
-const EMPTY_SETTINGS: StoreSettings = { pix_key: '', pix_receiver: '', pix_instructions: '', whatsapp: '' };
 
 function joinAddress(parts: { street: string; complement: string; neighborhood: string; city: string; reference: string }) {
   const main = [parts.street.trim(), parts.complement.trim()].filter(Boolean).join(', ');
@@ -82,7 +74,7 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadErrorDetail, setLoadErrorDetail] = useState<string | null>(null);
   const [products, setProducts] = useState<PublicProduct[]>([]);
-  const [settings, setSettings] = useState<StoreSettings>(EMPTY_SETTINGS);
+  const settings = useStoreSettings();
 
   const [cart, setCart] = useState<Record<string, number>>({});
   const [query, setQuery] = useState('');
@@ -105,7 +97,6 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
 
   useEffect(() => {
     loadProducts(true);
-    loadSettings();
   }, []);
 
   // "Repetir pedido" vindo do histórico: remonta o carrinho com o que ainda existe.
@@ -154,16 +145,6 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
     } finally {
       if (initial) setLoading(false);
     }
-  }
-
-  async function loadSettings() {
-    const { data, error } = await supabase.rpc('store_public_settings');
-    if (error) {
-      console.warn('store_public_settings:', error.message);
-      return;
-    }
-    const row = Array.isArray(data) ? data[0] : data;
-    if (row) setSettings({ ...EMPTY_SETTINGS, ...(row as Partial<StoreSettings>) });
   }
 
   const filteredProducts = useMemo(() => {
