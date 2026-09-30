@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { StoreCustomer } from './StoreShell';
-import { formatBRL, friendlyError, isSessionExpired } from '../../lib/storeSession';
+import { describeError, formatBRL, friendlyError, isSessionExpired } from '../../lib/storeSession';
 import {
   ShoppingCart,
   Plus,
@@ -54,6 +54,7 @@ type Props = {
 export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed, onViewOrders, onSessionExpired }: Props) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadErrorDetail, setLoadErrorDetail] = useState<string | null>(null);
   const [products, setProducts] = useState<PublicProduct[]>([]);
 
   const [cart, setCart] = useState<Record<string, number>>({});
@@ -100,6 +101,7 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
     if (initial) {
       setLoading(true);
       setLoadError(null);
+      setLoadErrorDetail(null);
     }
     try {
       const { data, error } = await supabase.rpc('get_public_products');
@@ -107,7 +109,10 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
       setProducts(((data || []) as PublicProduct[]).map((p) => ({ ...p, price: Number(p.price || 0) })));
     } catch (e) {
       console.error(e);
-      if (initial) setLoadError('Não foi possível carregar os produtos agora. Tente novamente em instantes.');
+      if (initial) {
+        setLoadError('Não foi possível carregar os produtos agora. Tente novamente em instantes.');
+        setLoadErrorDetail(describeError(e));
+      }
     } finally {
       if (initial) setLoading(false);
     }
@@ -203,6 +208,9 @@ export function StoreCatalog({ session, customer, repeatItems, onRepeatConsumed,
       <div className="py-16 text-center max-w-sm mx-auto">
         <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
         <p className="text-slate-700">{loadError}</p>
+        {loadErrorDetail && (
+          <p className="text-xs text-slate-400 mt-2 break-words">Detalhe técnico: {loadErrorDetail}</p>
+        )}
         <button
           onClick={() => loadProducts(true)}
           className="mt-5 bg-blue-600 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-blue-700 transition"

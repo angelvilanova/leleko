@@ -38,6 +38,19 @@ export function friendlyError(e: unknown, fallback: string): string {
   return fallback;
 }
 
+/** Texto técnico curto de um erro da API, para exibir abaixo da mensagem amigável. */
+export function describeError(e: unknown): string | null {
+  const err = e as { message?: string; code?: string; details?: string; hint?: string } | null;
+  if (!err) return null;
+  const parts = [
+    err.code ? `código ${err.code}` : null,
+    err.message || null,
+    err.details || null,
+    err.hint || null,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(' · ') : null;
+}
+
 export function isSessionExpired(e: unknown): boolean {
   const message = (e as { message?: string })?.message || '';
   return /sess[ãa]o expirada/i.test(message);

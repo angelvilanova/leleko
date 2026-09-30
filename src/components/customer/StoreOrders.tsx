@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { RepeatItem } from './StoreCatalog';
-import { formatBRL, isSessionExpired } from '../../lib/storeSession';
+import { describeError, formatBRL, isSessionExpired } from '../../lib/storeSession';
 import { ClipboardList, Loader2, AlertCircle, RefreshCw, RotateCcw, FileText, Package } from 'lucide-react';
 
 type HistoryItem = {
@@ -45,12 +45,14 @@ export function StoreOrders({ session, onRepeat, onSessionExpired }: Props) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
 
   const load = useCallback(
     async (initial = false) => {
       if (initial) setLoading(true);
       else setRefreshing(true);
       setError(null);
+      setErrorDetail(null);
 
       try {
         const { data, error: rpcError } = await supabase.rpc('store_my_orders', { p_session: session });
@@ -63,6 +65,7 @@ export function StoreOrders({ session, onRepeat, onSessionExpired }: Props) {
           return;
         }
         setError('Não foi possível carregar seus pedidos. Tente novamente.');
+        setErrorDetail(describeError(e));
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -91,6 +94,9 @@ export function StoreOrders({ session, onRepeat, onSessionExpired }: Props) {
       <div className="py-16 text-center max-w-sm mx-auto">
         <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
         <p className="text-slate-700">{error}</p>
+        {errorDetail && (
+          <p className="text-xs text-slate-400 mt-2 break-words">Detalhe técnico: {errorDetail}</p>
+        )}
         <button
           onClick={() => load(true)}
           className="mt-5 bg-blue-600 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-blue-700 transition"
