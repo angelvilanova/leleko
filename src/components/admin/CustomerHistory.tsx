@@ -53,6 +53,7 @@ function formatPhone(phone?: string | null): string {
 }
 
 const statusLabels: Record<string, { label: string; color: string }> = {
+  awaiting_approval: { label: 'Aguardando aprovação', color: 'bg-purple-100 text-purple-800 border-purple-200' },
   pending: { label: 'Pendente', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
   dispatched: { label: 'Despachado', color: 'bg-green-100 text-green-800 border-green-200' },
   cancelled: { label: 'Cancelado', color: 'bg-red-100 text-red-800 border-red-200' },

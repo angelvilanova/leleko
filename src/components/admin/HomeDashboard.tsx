@@ -200,6 +200,7 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps) {
   }
 
   const statusConfig: Record<string, { label: string; color: string; dot: string }> = {
+    awaiting_approval: { label: 'Aguardando aprovação', color: 'text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30', dot: 'bg-purple-500' },
     pending: { label: 'Pendente', color: 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30', dot: 'bg-amber-500' },
     dispatched: { label: 'Despachado', color: 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30', dot: 'bg-emerald-500' },
     cancelled: { label: 'Cancelado', color: 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/30', dot: 'bg-red-500' },
